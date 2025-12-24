@@ -50,6 +50,14 @@ export const BASE_POINTS: Record<NoteType, number> = {
   special: 100,
 };
 
+// 楽器別レーン数
+const LANE_COUNTS: Record<InstrumentType, number> = {
+  drums: 4,     // HH, SN, TM, KK
+  guitar: 3,    // 左、中、右
+  keyboard: 5,  // ドレミファソ
+  bass: 2,      // 低、高
+};
+
 // 汎用の譜面生成関数
 function generateChartForSong(
   songId: string,
@@ -65,10 +73,26 @@ function generateChartForSong(
   
   const startTime = 2000;
   const endTime = duration * 1000 - 5000;
+  const laneCount = LANE_COUNTS[instrument];
 
   for (let time = startTime; time < endTime; time += interval) {
     const type: NoteType = noteIndex % 16 === 0 ? 'special' : 'tap';
-    const lane = instrument === 'drums' ? (noteIndex % 4) : undefined;
+    
+    // 楽器ごとにレーンを分散
+    let lane: number;
+    if (instrument === 'drums') {
+      // ドラム: 4レーンを順番に
+      lane = noteIndex % 4;
+    } else if (instrument === 'keyboard') {
+      // キーボード: 5レーンをランダム風に
+      lane = (noteIndex * 3) % 5;
+    } else if (instrument === 'guitar') {
+      // ギター: 3レーンを左右に振る
+      lane = (noteIndex * 2) % 3;
+    } else {
+      // ベース: 2レーンを交互に
+      lane = noteIndex % 2;
+    }
     
     notes.push({ time: Math.round(time), type, lane });
     noteIndex++;

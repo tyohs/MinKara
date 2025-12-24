@@ -24,7 +24,7 @@ interface CallItem {
   id: string;
   text: string;
   emoji: string;
-  cost: number;  // 消費スコア
+  cost: number;
 }
 
 const CALLS: CallItem[] = [
@@ -33,6 +33,21 @@ const CALLS: CallItem[] = [
   { id: 'saikou', text: 'サイコー！', emoji: '⭐', cost: 800 },
   { id: 'encore', text: 'アンコール！', emoji: '👏', cost: 1000 },
 ];
+
+// 振動フィードバック
+function vibrate(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
+// 楽器別レーン数
+const LANE_CONFIG: Record<InstrumentType, number> = {
+  drums: 4,     // HH, SN, TM, KK
+  guitar: 3,    // 左、中、右
+  keyboard: 5,  // ドレミファソ
+  bass: 2,      // 低、高
+};
 
 interface BandGameProps {
   chart: InstrumentChart;
@@ -52,16 +67,19 @@ export default function BandGame({
   const [notes, setNotes] = useState<NoteState[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [score, setScore] = useState(0);
-  const [totalScore, setTotalScore] = useState(0); // 累計スコア（結果表示用）
+  const [totalScore, setTotalScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [lastJudgment, setLastJudgment] = useState<Judgment | null>(null);
   const [showMissEffect, setShowMissEffect] = useState(false);
   const [activeCall, setActiveCall] = useState<CallItem | null>(null);
   const [hitEffect, setHitEffect] = useState<{x: number, y: number} | null>(null);
+  const [swipeStartY, setSwipeStartY] = useState<number | null>(null);
+  const [callIndex, setCallIndex] = useState(0);
   const animationFrameRef = useRef<number | undefined>(undefined);
   const laneRef = useRef<HTMLDivElement>(null);
   const info = INSTRUMENT_INFO[instrument];
+  const laneCount = LANE_CONFIG[instrument];
 
   useEffect(() => {
     const initialNotes: NoteState[] = chart.notes.map((note, index) => ({
@@ -113,6 +131,7 @@ export default function BandGame({
       if (missCount > 0) {
         setCombo(0);
         setShowMissEffect(true);
+        vibrate(100); // ミス時の振動
         setTimeout(() => setShowMissEffect(false), 200);
       }
 
@@ -130,7 +149,19 @@ export default function BandGame({
     }
   }, [combo, maxCombo]);
 
-  // ノートをタップ（レーン全体で反応）
+  // ノートのX位置を計算（楽器別）
+  const getNoteX = useCallback((note: NoteState) => {
+    const lane = note.lane ?? 0;
+    const padding = 15; // 左右の余白 %
+    const usableWidth = 100 - padding * 2;
+    
+    if (laneCount === 1) return 50;
+    
+    const laneWidth = usableWidth / laneCount;
+    return padding + laneWidth * lane + laneWidth / 2;
+  }, [laneCount]);
+
+  // ノートをタップ
   const handleTap = useCallback((e?: React.TouchEvent | React.MouseEvent) => {
     const targetNote = notes
       .filter(n => !n.hit)
@@ -148,10 +179,13 @@ export default function BandGame({
 
     if (diff <= JUDGMENT_WINDOWS.perfect) {
       judgment = 'perfect';
+      vibrate(30); // PERFECT: 短い振動
     } else if (diff <= JUDGMENT_WINDOWS.great) {
       judgment = 'great';
+      vibrate(20); // GREAT: より短い振動
     } else {
       judgment = 'good';
+      vibrate(10); // GOOD: 最短の振動
     }
 
     const basePoints = BASE_POINTS[targetNote.type];
@@ -185,17 +219,68 @@ export default function BandGame({
     }, 300);
   }, [notes, currentTime, combo]);
 
-  // コールを使用（スコア消費型）
+  // スワイプ開始
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setSwipeStartY(e.touches[0].clientY);
+    handleTap(e);
+  }, [handleTap]);
+
+  // スワイプ終了 - 上スワイプでコール
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (swipeStartY !== null) {
+      const endY = e.changedTouches[0].clientY;
+      const swipeDistance = swipeStartY - endY;
+      
+      // 上方向に50px以上スワイプでコール発動
+      if (swipeDistance > 50) {
+        const availableCalls = CALLS.filter(c => score >= c.cost);
+        if (availableCalls.length > 0) {
+          const call = availableCalls[callIndex % availableCalls.length];
+          handleCall(call);
+          setCallIndex(prev => prev + 1);
+        }
+      }
+    }
+    setSwipeStartY(null);
+  }, [swipeStartY, score, callIndex]);
+
+  // コールを使用
   const handleCall = useCallback((call: CallItem) => {
     if (score < call.cost) return;
     
     setActiveCall(call);
     setScore(prev => Math.max(0, prev - call.cost));
+    vibrate([50, 30, 50]); // コール時のパターン振動
     
     setTimeout(() => setActiveCall(null), 1200);
   }, [score]);
 
   const APPROACH_TIME = 2000;
+
+  // レーン区切り線を描画
+  const renderLaneLines = () => {
+    if (laneCount <= 1) return null;
+    
+    const lines = [];
+    const padding = 15;
+    const usableWidth = 100 - padding * 2;
+    const laneWidth = usableWidth / laneCount;
+    
+    for (let i = 1; i < laneCount; i++) {
+      const x = padding + laneWidth * i;
+      lines.push(
+        <div
+          key={i}
+          className="absolute top-0 bottom-0 w-px"
+          style={{
+            left: `${x}%`,
+            background: 'linear-gradient(180deg, transparent, rgba(255,255,255,0.1), transparent)',
+          }}
+        />
+      );
+    }
+    return lines;
+  };
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden">
@@ -244,7 +329,6 @@ export default function BandGame({
 
       {/* Top UI Bar */}
       <div className="relative z-20 p-3 flex items-center justify-between">
-        {/* Score */}
         <div>
           <div className="text-white/50 text-xs">SCORE</div>
           <motion.div 
@@ -257,7 +341,6 @@ export default function BandGame({
           </motion.div>
         </div>
 
-        {/* Instrument */}
         <div 
           className="px-4 py-2 rounded-full flex items-center gap-2"
           style={{ backgroundColor: `${info.color}30` }}
@@ -266,7 +349,6 @@ export default function BandGame({
           <span className="text-white text-sm font-medium">{info.label}</span>
         </div>
 
-        {/* Combo */}
         <div className="text-right">
           <div className="text-white/50 text-xs">COMBO</div>
           <motion.div 
@@ -283,22 +365,28 @@ export default function BandGame({
         </div>
       </div>
 
-      {/* Main Lane Area - タップ可能 */}
+      {/* Swipe hint */}
+      <div className="relative z-20 text-center pb-2">
+        <span className="text-white/30 text-xs">↑ 上スワイプでコール</span>
+      </div>
+
+      {/* Main Lane Area */}
       <div 
         ref={laneRef}
         className="flex-1 relative cursor-pointer select-none"
         onClick={handleTap}
-        onTouchStart={handleTap}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           perspective: '800px',
           perspectiveOrigin: '50% 0%',
         }}
       >
-        {/* Lane background with perspective */}
+        {/* Lane background */}
         <div 
           className="absolute inset-x-0 top-0 bottom-0 mx-auto"
           style={{
-            width: '80%',
+            width: '90%',
             background: 'linear-gradient(180deg, rgba(168, 85, 247, 0.1) 0%, rgba(59, 130, 246, 0.2) 100%)',
             transform: 'rotateX(60deg)',
             transformOrigin: 'center bottom',
@@ -306,6 +394,9 @@ export default function BandGame({
             borderRight: '2px solid rgba(255,255,255,0.1)',
           }}
         />
+
+        {/* Lane dividers */}
+        {renderLaneLines()}
 
         {/* Hit effect */}
         <AnimatePresence>
@@ -333,20 +424,21 @@ export default function BandGame({
           if (timeUntilHit > APPROACH_TIME || timeUntilHit < -200) return null;
 
           const progress = 1 - (timeUntilHit / APPROACH_TIME);
-          // 奥から手前への動き
-          const y = 10 + progress * 75; // 10% -> 85%
-          const scale = 0.3 + progress * 0.7; // 遠くは小さく
+          const y = 10 + progress * 75;
+          const x = getNoteX(note);
+          const scale = 0.3 + progress * 0.7;
           const size = (note.type === 'special' ? 70 : 55) * scale;
 
           return (
             <motion.div
               key={note.id}
-              className="absolute left-1/2 rounded-lg flex items-center justify-center"
+              className="absolute rounded-lg flex items-center justify-center"
               style={{
+                left: `${x}%`,
                 top: `${y}%`,
                 width: size,
                 height: size * 0.4,
-                transform: 'translateX(-50%)',
+                transform: 'translate(-50%, -50%)',
                 background: note.type === 'special' 
                   ? 'linear-gradient(90deg, #a855f7, #ec4899, #f97316)'
                   : `linear-gradient(90deg, ${info.color}, ${info.color}CC)`,
@@ -366,7 +458,7 @@ export default function BandGame({
           className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center"
           style={{
             top: '85%',
-            width: '85%',
+            width: '90%',
             height: '40px',
             background: 'linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.5), transparent)',
             borderTop: '3px solid rgba(168, 85, 247, 0.8)',
@@ -398,41 +490,28 @@ export default function BandGame({
         </div>
       </div>
 
-      {/* Call Buttons - 画面下部に横並び */}
+      {/* Score indicator for calls */}
       <div className="relative z-20 p-3 bg-black/50 backdrop-blur-md">
-        <div className="flex gap-2 justify-center">
-          {CALLS.map(call => {
-            const canUse = score >= call.cost;
-            
-            return (
-              <motion.button
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1">
+            {CALLS.map(call => (
+              <div
                 key={call.id}
-                whileTap={canUse ? { scale: 0.95 } : {}}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCall(call);
-                }}
-                disabled={!canUse}
-                className={`
-                  px-4 py-3 rounded-xl flex flex-col items-center gap-1 min-w-[70px]
-                  transition-all
-                  ${canUse 
-                    ? 'bg-purple-600/80 border border-purple-400/50' 
-                    : 'bg-white/5 border border-white/10 opacity-50'
-                  }
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm
+                  ${score >= call.cost ? 'opacity-100' : 'opacity-30'}
                 `}
+                style={{ 
+                  background: score >= call.cost ? `${info.color}50` : 'rgba(255,255,255,0.1)',
+                }}
               >
-                <span className="text-xl">{call.emoji}</span>
-                <span className="text-white text-xs font-medium">{call.cost}</span>
-              </motion.button>
-            );
-          })}
-        </div>
-        
-        {/* Usable score indicator */}
-        <div className="text-center mt-2">
-          <span className="text-white/40 text-xs">使用可能: </span>
-          <span className="text-purple-400 text-sm font-bold">{score.toLocaleString()}</span>
+                {call.emoji}
+              </div>
+            ))}
+          </div>
+          <div className="text-right">
+            <span className="text-white/40 text-xs">コールポイント: </span>
+            <span className="text-purple-400 font-bold">{score.toLocaleString()}</span>
+          </div>
         </div>
       </div>
     </div>
