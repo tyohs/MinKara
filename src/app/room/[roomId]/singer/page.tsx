@@ -28,7 +28,7 @@ export default function SingerPage() {
   const roomId = params.roomId as string;
   
   const { room, updateExcitement, endGame: endGameStore } = useGameStore();
-  const { initRoom, activeRequests, activeCalls, clearRequest } = useRoomStore();
+  const { initRoom, activeRequests, activeCalls, activeMessages, clearRequest } = useRoomStore();
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const [phase, setPhase] = useState<GamePhase>('song-select');
@@ -39,6 +39,7 @@ export default function SingerPage() {
   const [audienceCount] = useState(3 + Math.floor(Math.random() * 3));
   const [completedCount, setCompletedCount] = useState(0);
   const [showCallEffect, setShowCallEffect] = useState<SyncEvent | null>(null);
+  const [displayedMessages, setDisplayedMessages] = useState<SyncEvent[]>([]);
 
   // Initialize room connection
   useEffect(() => {
@@ -75,6 +76,22 @@ export default function SingerPage() {
       setTimeout(() => setShowCallEffect(null), 2000);
     }
   }, [activeCalls, updateExcitement]);
+
+  // Handle incoming messages
+  useEffect(() => {
+    activeMessages.forEach(msg => {
+      const existingIds = displayedMessages.map(m => m.timestamp);
+      if (!existingIds.includes(msg.timestamp)) {
+        setDisplayedMessages(prev => [...prev, msg]);
+        updateExcitement(3);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          setDisplayedMessages(prev => prev.filter(m => m.timestamp !== msg.timestamp));
+        }, 5000);
+      }
+    });
+  }, [activeMessages, displayedMessages, updateExcitement]);
 
   const handleSongSelect = (song: Song) => {
     setSelectedSong(song);
@@ -190,6 +207,33 @@ export default function SingerPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Flowing Messages */}
+      <div className="absolute top-20 left-0 right-0 z-40 pointer-events-none overflow-hidden h-32">
+        <AnimatePresence>
+          {displayedMessages.map((msg, index) => (
+            <motion.div
+              key={msg.timestamp}
+              initial={{ opacity: 0, x: -100 }}
+              animate={{ 
+                opacity: 1, 
+                x: '100vw',
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 5, ease: 'linear' }}
+              className="absolute whitespace-nowrap"
+              style={{ 
+                top: `${(index % 3) * 36}px`,
+              }}
+            >
+              <span className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm">
+                💬 {msg.data.text as string}
+                <span className="text-white/60 ml-2 text-xs">- {msg.playerName}</span>
+              </span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Song Selection */}
       {phase === 'song-select' && (

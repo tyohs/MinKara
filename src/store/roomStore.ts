@@ -8,6 +8,7 @@ export type SyncEventType =
   | 'player_leave'
   | 'call'
   | 'request'
+  | 'message'
   | 'game_start'
   | 'score_update';
 
@@ -34,6 +35,7 @@ export interface RoomState {
   players: Player[];
   activeRequests: SyncEvent[];
   activeCalls: SyncEvent[];
+  activeMessages: SyncEvent[];
   isConnected: boolean;
   
   // Actions
@@ -41,7 +43,9 @@ export interface RoomState {
   leaveRoom: () => void;
   broadcastCall: (callText: string, callEmoji: string) => void;
   broadcastRequest: (requestText: string, requestEmoji: string) => void;
+  broadcastMessage: (messageText: string) => void;
   clearRequest: (timestamp: number) => void;
+  clearMessage: (timestamp: number) => void;
 }
 
 // BroadcastChannel for cross-tab communication
@@ -54,6 +58,7 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   players: [],
   activeRequests: [],
   activeCalls: [],
+  activeMessages: [],
   isConnected: false,
 
   initRoom: (roomId, playerName, role, instrument) => {
@@ -104,6 +109,12 @@ export const useRoomStore = create<RoomState>((set, get) => ({
         case 'request':
           set(s => ({
             activeRequests: [...s.activeRequests, syncEvent]
+          }));
+          break;
+          
+        case 'message':
+          set(s => ({
+            activeMessages: [...s.activeMessages, syncEvent].slice(-20)
           }));
           break;
       }
@@ -210,6 +221,32 @@ export const useRoomStore = create<RoomState>((set, get) => ({
   clearRequest: (timestamp) => {
     set(s => ({
       activeRequests: s.activeRequests.filter(r => r.timestamp !== timestamp)
+    }));
+  },
+
+  broadcastMessage: (messageText) => {
+    const state = get();
+    if (!channel || !state.roomId) return;
+
+    const messageEvent: SyncEvent = {
+      type: 'message',
+      roomId: state.roomId,
+      playerId: state.playerId,
+      playerName: state.playerName,
+      data: { text: messageText },
+      timestamp: Date.now(),
+    };
+    
+    channel.postMessage(messageEvent);
+    
+    set(s => ({
+      activeMessages: [...s.activeMessages, messageEvent].slice(-20)
+    }));
+  },
+
+  clearMessage: (timestamp) => {
+    set(s => ({
+      activeMessages: s.activeMessages.filter(m => m.timestamp !== timestamp)
     }));
   },
 }));

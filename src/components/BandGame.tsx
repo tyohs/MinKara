@@ -37,11 +37,19 @@ interface RequestItem {
   cooldown: number; // クールダウン（ms）
 }
 
+// 4方向スワイプ用コール
+const SWIPE_CALLS: Record<'up' | 'down' | 'left' | 'right', CallItem> = {
+  up: { id: 'yeah', text: 'イェーイ！', emoji: '🎉', cost: 200 },
+  down: { id: 'fuu', text: 'フゥー！', emoji: '🔥', cost: 300 },
+  left: { id: 'kawaii', text: 'かわいい！', emoji: '💖', cost: 300 },
+  right: { id: 'saikou', text: 'サイコー！', emoji: '⭐', cost: 500 },
+};
+
 const CALLS: CallItem[] = [
-  { id: 'yeah', text: 'イェーイ！', emoji: '🎉', cost: 200 },
-  { id: 'fuu', text: 'フゥー！', emoji: '🔥', cost: 300 },
-  { id: 'kawaii', text: 'かわいい！', emoji: '💖', cost: 300 },
-  { id: 'saikou', text: 'サイコー！', emoji: '⭐', cost: 500 },
+  SWIPE_CALLS.up,
+  SWIPE_CALLS.down,
+  SWIPE_CALLS.left,
+  SWIPE_CALLS.right,
 ];
 
 const REQUESTS: RequestItem[] = [
@@ -87,7 +95,11 @@ export default function BandGame({
   const [hitEffect, setHitEffect] = useState<{x: number, y: number, isSpecial: boolean} | null>(null);
   const [selectedCallIndex, setSelectedCallIndex] = useState(0);
   const [swipeStartY, setSwipeStartY] = useState<number | null>(null);
+  const [swipeStartX, setSwipeStartX] = useState<number | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'up' | 'down' | 'left' | 'right' | null>(null);
   const [requestCooldowns, setRequestCooldowns] = useState<Record<string, number>>({});
+  const [customMessage, setCustomMessage] = useState('');
+  const [showMessageInput, setShowMessageInput] = useState(false);
   const animationFrameRef = useRef<number | undefined>(undefined);
   const laneRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -244,26 +256,7 @@ export default function BandGame({
     }, targetNote.type === 'special' ? 600 : 300);
   }, [notes, currentTime, combo]);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    setSwipeStartY(e.touches[0].clientY);
-    handleTap(e);
-  }, [handleTap]);
-
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (swipeStartY !== null) {
-      const endY = e.changedTouches[0].clientY;
-      const swipeDistance = swipeStartY - endY;
-      
-      if (swipeDistance > 50) {
-        const selectedCall = CALLS[selectedCallIndex];
-        if (score >= selectedCall.cost) {
-          handleCall(selectedCall);
-        }
-      }
-    }
-    setSwipeStartY(null);
-  }, [swipeStartY, score, selectedCallIndex]);
-
+  // コール発動
   const handleCall = useCallback((call: CallItem) => {
     if (score < call.cost) return;
     
@@ -276,6 +269,54 @@ export default function BandGame({
     
     setTimeout(() => setActiveCall(null), 1200);
   }, [score]);
+
+  // スワイプ開始位置記録
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    setSwipeStartY(e.touches[0].clientY);
+    setSwipeStartX(e.touches[0].clientX);
+    handleTap(e);
+  }, [handleTap]);
+
+  // 4方向スワイプでコール発動
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (swipeStartY === null || swipeStartX === null) {
+      setSwipeStartY(null);
+      setSwipeStartX(null);
+      return;
+    }
+    
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - swipeStartX;
+    const deltaY = swipeStartY - endY; // 上が正
+    
+    const minSwipe = 50;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+    
+    // スワイプ方向を判定
+    if (absX > minSwipe || absY > minSwipe) {
+      let direction: 'up' | 'down' | 'left' | 'right';
+      
+      if (absY > absX) {
+        // 縦方向
+        direction = deltaY > 0 ? 'up' : 'down';
+      } else {
+        // 横方向
+        direction = deltaX > 0 ? 'right' : 'left';
+      }
+      
+      const call = SWIPE_CALLS[direction];
+      if (score >= call.cost) {
+        handleCall(call);
+        setSwipeDirection(direction);
+        setTimeout(() => setSwipeDirection(null), 500);
+      }
+    }
+    
+    setSwipeStartY(null);
+    setSwipeStartX(null);
+  }, [swipeStartY, swipeStartX, score, handleCall]);
 
   const handleRequest = useCallback((request: RequestItem) => {
     if (score < request.cost) return;
@@ -427,12 +468,23 @@ export default function BandGame({
           </motion.div>
         </div>
 
-        <div 
-          className="px-4 py-2 rounded-full flex items-center gap-2"
-          style={{ backgroundColor: `${info.color}30` }}
-        >
-          <span className="text-xl">{info.emoji}</span>
-          <span className="text-white text-sm font-medium">{info.label}</span>
+        <div className="flex items-center gap-3">
+          <div 
+            className="px-4 py-2 rounded-full flex items-center gap-2"
+            style={{ backgroundColor: `${info.color}30` }}
+          >
+            <span className="text-xl">{info.emoji}</span>
+            <span className="text-white text-sm font-medium">{info.label}</span>
+          </div>
+          
+          {/* Stop Button */}
+          <button
+            onClick={() => onGameEnd?.()}
+            className="w-10 h-10 rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 hover:bg-red-500/30 transition-colors"
+            title="ゲームを終了"
+          >
+            ⏹
+          </button>
         </div>
 
         <div className="text-right">
@@ -642,18 +694,58 @@ export default function BandGame({
 
       {/* Bottom bar */}
       <div className="relative z-20 p-2 bg-black/50 backdrop-blur-md">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1">
-            <span className="text-lg">{selectedCall.emoji}</span>
-            <span className="text-white/60 text-xs">{selectedCall.text}</span>
+        {showMessageInput ? (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder="メッセージを入力..."
+              className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm placeholder-white/40 focus:outline-none focus:border-purple-400"
+              maxLength={50}
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                if (customMessage.trim()) {
+                  useRoomStore.getState().broadcastMessage(customMessage.trim());
+                  setCustomMessage('');
+                }
+                setShowMessageInput(false);
+              }}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-bold"
+            >
+              送信
+            </button>
+            <button
+              onClick={() => setShowMessageInput(false)}
+              className="text-white/40 px-2"
+            >
+              ✕
+            </button>
           </div>
-          <div>
-            <span className="text-white/40 text-xs">PT: </span>
-            <span className={`font-bold ${canUseSelectedCall ? 'text-purple-400' : 'text-white/40'}`}>
-              {score.toLocaleString()}
-            </span>
+        ) : (
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-1">
+              <span className="text-lg">{selectedCall.emoji}</span>
+              <span className="text-white/60 text-xs">{selectedCall.text}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowMessageInput(true)}
+                className="text-white/60 text-xs bg-white/10 px-3 py-1 rounded-full hover:bg-white/20"
+              >
+                ✉️ メッセージ
+              </button>
+              <div>
+                <span className="text-white/40 text-xs">PT: </span>
+                <span className={`font-bold ${canUseSelectedCall ? 'text-purple-400' : 'text-white/40'}`}>
+                  {score.toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
