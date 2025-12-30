@@ -1,147 +1,106 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter, useParams } from 'next/navigation';
-import { useGameStore } from '@/store/gameStore';
+import { useParams } from 'next/navigation';
+import { useRoomStore } from '@/store/roomStore';
+import ReservationList from '@/components/room/ReservationList';
+import SongBookingModal from '@/components/room/SongBookingModal';
+import { SONGS } from '@/data/songs';
 
-type GameMode = 'band' | 'audience' | 'singer';
-
-export default function RoomPage() {
-  const router = useRouter();
+export default function RoomLobbyPage() {
   const params = useParams();
   const roomId = params.roomId as string;
-  
-  const { room, currentUser, startGame } = useGameStore();
-  const [selectedMode, setSelectedMode] = useState<GameMode | null>(null);
+  const { initRoom, players, currentReservation, gamePhase } = useRoomStore();
+  const [isBookingModalOpen, setBookingModalOpen] = useState(false);
 
-  const mockParticipants = room?.participants || [
-    { id: '1', name: currentUser?.name || 'You', role: 'audience', isHost: currentUser?.isHost },
-  ];
+  // Initialize room connection on mount
+  useEffect(() => {
+    // Default role 'audience' for lobby visitors until they choose otherwise
+    const name = localStorage.getItem('minKaraName') || 'Guest-' + Math.floor(Math.random() * 1000);
+    initRoom(roomId, name, 'audience');
+  }, [roomId, initRoom]);
 
-  const handleStart = () => {
-    startGame();
-    if (selectedMode === 'band') {
-      router.push(`/room/${roomId}/band`);
-    } else if (selectedMode === 'singer') {
-      router.push(`/room/${roomId}/singer`);
-    } else {
-      router.push(`/room/${roomId}/audience`);
-    }
-  };
+  // Find current song details if playing
+  const currentSong = currentReservation 
+    ? SONGS.find(s => s.id === currentReservation.song_id) 
+    : null;
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 bg-orbs">
+    <main className="min-h-screen flex flex-col p-6 bg-orbs pb-32">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        className="flex items-center justify-between mb-8"
       >
-        {/* Room Code */}
-        <div className="text-center mb-8">
-          <p className="text-white/40 text-xs uppercase tracking-wider mb-2">ルームコード</p>
-          <h1 className="text-4xl font-bold text-white tracking-widest">{roomId}</h1>
+        <div>
+          <p className="text-white/40 text-xs uppercase tracking-wider">ROOM</p>
+          <h1 className="text-2xl font-bold text-white tracking-widest">{roomId}</h1>
         </div>
-
-        {/* Participants */}
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="glass-card p-5 mb-6"
-        >
-          <h2 className="text-white/60 text-xs uppercase tracking-wider mb-4">参加者</h2>
-          <div className="space-y-2">
-            {mockParticipants.map((p, i) => (
-              <div 
-                key={p.id || i}
-                className="flex items-center justify-between p-3 bg-white/5 rounded-xl"
-              >
-                <span className="text-white text-sm">
-                  {p.name} {p.isHost && <span className="text-amber-400">👑</span>}
-                </span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Mode Selection */}
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="glass-card p-5 mb-6"
-        >
-          <h2 className="text-white/60 text-xs uppercase tracking-wider mb-4">モード選択</h2>
-          
-          {/* Band Mode */}
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setSelectedMode('band')}
-            className={`w-full p-5 rounded-xl text-left transition-all mb-3 backdrop-blur-md ${
-              selectedMode === 'band'
-                ? 'bg-white/15 border border-white/30'
-                : 'bg-white/5 border border-white/10 hover:bg-white/10'
-            }`}
-          >
-            <div className="flex items-center gap-4">
-              <div className="text-3xl">🎸</div>
-              <div className="flex-1">
-                <span className="text-white font-semibold block">即席バンド</span>
-                <p className="text-white/50 text-sm">楽器を選んで演奏</p>
-              </div>
-              <div className="text-xl opacity-50">🥁🎹</div>
-            </div>
-          </motion.button>
-
-          {/* Other modes */}
-          <div className="grid grid-cols-2 gap-3">
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setSelectedMode('singer')}
-              className={`p-4 rounded-xl text-center transition-all backdrop-blur-md ${
-                selectedMode === 'singer'
-                  ? 'bg-white/15 border border-white/30'
-                  : 'bg-white/5 border border-white/10 hover:bg-white/10'
-              }`}
-            >
-              <span className="text-2xl block mb-2">🎤</span>
-              <span className="text-white text-sm font-medium">シンガー</span>
-            </motion.button>
-            
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setSelectedMode('audience')}
-              className={`p-4 rounded-xl text-center transition-all backdrop-blur-md ${
-                selectedMode === 'audience'
-                  ? 'bg-white/15 border border-white/30'
-                  : 'bg-white/5 border border-white/10 hover:bg-white/10'
-              }`}
-            >
-              <span className="text-2xl block mb-2">🔦</span>
-              <span className="text-white text-sm font-medium">応援</span>
-            </motion.button>
-          </div>
-        </motion.div>
-
-        {/* Start Button */}
-        <motion.button
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleStart}
-          disabled={!selectedMode}
-          className="btn-primary w-full disabled:opacity-40"
-        >
-          {selectedMode ? '開始する' : 'モードを選択してください'}
-        </motion.button>
-
-        {/* Hint */}
-        <p className="text-center text-white/30 text-xs mt-6">
-          ルームコードを共有して友達を招待
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-white/60 text-xs">{players.length} Online</span>
+        </div>
       </motion.div>
+
+      {/* Current Status Card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="mb-8"
+      >
+        {currentReservation && currentSong ? (
+          <div className="glass-card p-6 border-l-4 border-indigo-500 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10 text-9xl transform translate-x-10 -translate-y-10">
+              🎤
+            </div>
+            <div className="relative z-10">
+              <span className="inline-block px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded text-xs font-bold mb-3">
+                NOW PLAYING
+              </span>
+              <h2 className="text-3xl font-bold text-white mb-1 leading-tight">
+                {currentSong.title}
+              </h2>
+              <p className="text-white/60 text-lg mb-4">{currentSong.artist}</p>
+              
+              <div className="flex items-center gap-2 text-white/50 text-sm">
+                <span>🎤 Singer:</span>
+                <span className="text-white font-medium">{currentReservation.user_name}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="glass-card p-8 text-center flex flex-col items-center justify-center min-h-[160px]">
+            <div className="text-4xl mb-4 opacity-50">🎵</div>
+            <h2 className="text-xl font-bold text-white mb-2">演奏待機中</h2>
+            <p className="text-white/40 text-sm">
+              曲を予約してカラオケを始めよう！
+            </p>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Reservation Queue */}
+      <div className="mb-20">
+         <ReservationList />
+      </div>
+
+      {/* Floating Action Button for Booking */}
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setBookingModalOpen(true)}
+        className="fixed bottom-24 right-6 w-16 h-16 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full shadow-lg shadow-indigo-500/30 flex items-center justify-center text-3xl z-40 border border-white/20"
+      >
+        🎤
+      </motion.button>
+
+      {/* Booking Modal */}
+      <SongBookingModal 
+        isOpen={isBookingModalOpen} 
+        onClose={() => setBookingModalOpen(false)} 
+      />
     </main>
   );
 }

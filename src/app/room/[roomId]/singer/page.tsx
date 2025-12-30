@@ -28,11 +28,30 @@ export default function SingerPage() {
   const roomId = params.roomId as string;
   
   const { room, updateExcitement, endGame: endGameStore } = useGameStore();
-  const { initRoom, activeRequests, activeCalls, activeMessages, clearRequest } = useRoomStore();
+  const { 
+    initRoom, 
+    activeRequests, 
+    activeCalls, 
+    activeMessages, 
+    clearRequest,
+    gamePhase,
+    currentSongId,
+    startTime,
+    broadcastGameUpdate,
+    fetchReservations,
+    currentReservation,
+    startGame,
+    roomId: storedRoomId
+  } = useRoomStore();
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const [phase, setPhase] = useState<GamePhase>('song-select');
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  // Derive state from room store
+  // Derive state from room store
+  const phase = gamePhase;
+  const selectedSong = currentReservation 
+    ? SONGS.find(s => s.id === currentReservation.song_id) 
+    : (currentSongId ? SONGS.find(s => s.id === currentSongId) : null);
+
   const [countdown, setCountdown] = useState(3);
   const [currentTime, setCurrentTime] = useState(0);
   const [fansaRequests, setFansaRequests] = useState<FansaRequestState[]>([]);
@@ -44,7 +63,8 @@ export default function SingerPage() {
   // Initialize room connection
   useEffect(() => {
     initRoom(roomId, 'シンガー', 'singer');
-  }, [roomId, initRoom]);
+    fetchReservations();
+  }, [roomId, initRoom, fetchReservations]);
 
   // Handle incoming requests from band members
   useEffect(() => {
@@ -94,29 +114,65 @@ export default function SingerPage() {
   }, [activeMessages, displayedMessages, updateExcitement]);
 
   const handleSongSelect = (song: Song) => {
-    setSelectedSong(song);
-    setPhase('ready');
+    broadcastGameUpdate({
+      currentSongId: song.id,
+      gamePhase: 'ready'
+    });
   };
 
   const handleStart = async () => {
-    setPhase('countdown');
+    // Start 3 seconds from now
+    const startAt = Date.now() + 3000;
     
-    for (let i = 3; i > 0; i--) {
-      setCountdown(i);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    setPhase('playing');
-    
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      try {
-        await audioRef.current.play();
-      } catch (e) {
-        console.error('Audio playback failed:', e);
-      }
-    }
+    broadcastGameUpdate({
+      gamePhase: 'countdown',
+      startTime: startAt
+    });
   };
+
+  // Handle auto-start based on synchronized startTime
+  useEffect(() => {
+    if (phase === 'countdown' && startTime) {
+      const now = Date.now();
+      const delay = Math.max(0, startTime - now);
+      
+      // Start countdown animation locally
+      let count = 3;
+      setCountdown(count);
+      
+      const countInterval = setInterval(() => {
+        count--;
+        if (count > 0) setCountdown(count);
+      }, (delay / 3));
+
+      const timer = setTimeout(async () => {
+        clearInterval(countInterval);
+        
+        // Only the host (singer) triggers the phase change to playing
+        // With new logic, broadcastGameUpdate is handled within startGame mainly,
+        // but here we might still need to trigger the play phase if using the old flow.
+        // For the new reservation flow, startGame() does this.
+        // But for compatibility with the countDown effect here, let's keep it.
+        broadcastGameUpdate({
+          gamePhase: 'playing'
+        });
+
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          try {
+            await audioRef.current.play();
+          } catch (e) {
+            console.error('Audio playback failed:', e);
+          }
+        }
+      }, delay);
+
+      return () => {
+        clearTimeout(timer);
+        clearInterval(countInterval);
+      };
+    }
+  }, [phase, startTime, broadcastGameUpdate]);
 
   useEffect(() => {
     if (phase !== 'playing') return;
@@ -164,7 +220,20 @@ export default function SingerPage() {
 
   const handleBack = () => {
     if (phase === 'ready') {
-      setPhase('song-select');
+      broadcastGameUpdate({
+        gamePhase: 'song-select',
+        currentSongId: undefined // Set to undefined (which will result in null effectively locally) or handle explicit null on store
+      });
+      // Store accepts string | null, but json payload might drop null keys. 
+      // Let's pass empty string if needed or rely on store partial updates.
+      // Actually store signature is Partial<{... currentSongId: string ...}>. 
+      // Let's cast to any or fix store to accept null in partial.
+      // The store definition is: currentSongId: string | null.
+      // So Partial allows currentSongId?: string | null.
+      broadcastGameUpdate({
+        gamePhase: 'song-select',
+        currentSongId: '' // Using empty string to represent no song selected if null is tricky
+      });
     } else {
       router.push(`/room/${roomId}`);
     }
@@ -239,36 +308,39 @@ export default function SingerPage() {
       {phase === 'song-select' && (
         <div className="flex-1 flex flex-col p-6 bg-orbs">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">🎤 曲を選択</h1>
-            <p className="text-white/50 text-sm">歌いたい曲を選んでください</p>
+            <h1 className="text-2xl font-bold text-white mb-2">🎤 待機中</h1>
+            <p className="text-white/50 text-sm">予約されている曲を歌います</p>
           </div>
 
-          <div className="space-y-4">
-            {SONGS.map((song, index) => (
-              <motion.button
-                key={song.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSongSelect(song)}
-                className="w-full p-5 rounded-2xl backdrop-blur-md bg-white/8 border border-white/15 hover:bg-white/15 transition-all text-left"
+          <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+            {selectedSong ? (
+               <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center w-full max-w-md"
               >
-                <div className="flex items-center gap-4">
-                  <span className="text-4xl">{song.coverEmoji}</span>
-                  <div className="flex-1">
-                    <h3 className="text-white font-semibold text-lg">{song.title}</h3>
-                    <p className="text-white/50 text-sm">{song.artist}</p>
-                    <div className="flex gap-3 mt-1 text-xs text-white/40">
-                      <span>BPM {song.bpm}</span>
-                      <span>•</span>
-                      <span>{song.genre}</span>
-                    </div>
-                  </div>
-                  <div className="text-white/30 text-2xl">→</div>
+                <div className="w-32 h-32 mx-auto bg-white/10 rounded-full flex items-center justify-center text-6xl mb-6">
+                  {selectedSong.coverEmoji}
                 </div>
-              </motion.button>
-            ))}
+                <h2 className="text-3xl font-bold text-white mb-2">{selectedSong.title}</h2>
+                <p className="text-white/60 text-xl mb-8">{selectedSong.artist}</p>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => startGame()}
+                  className="w-full btn-primary py-4 text-xl shadow-xl shadow-indigo-500/20"
+                >
+                  🚀 演奏スタート
+                </motion.button>
+              </motion.div>
+            ) : (
+              <div className="text-center text-white/40">
+                <p className="mb-4 text-6xl">👂</p>
+                <p>現在予約されている曲はありません</p>
+                <p className="text-sm mt-2">ロビーで曲を予約してください</p>
+              </div>
+            )}
           </div>
 
           <button
