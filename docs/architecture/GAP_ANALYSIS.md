@@ -11,7 +11,8 @@
 | 基本機能 | ✅ 完成 | - | 100% |
 | リズムゲーム | ✅ 完成 | - | 100% |
 | コールシステム | ✅ 完成 | - | 100% |
-| リアルタイム同期 | ⚠️ 同一デバイスのみ | 異なるデバイス間 | 50% |
+| リアルタイム通信 | ❌ 実装はあるが機能不全 | WebSocket + WebRTC (NTP同期) | 10% |
+| **選曲・フェーズ同期** | ❌ ローカル完結で同期なし | 全員で状態共有 (Supabase Realtime) | 0% |
 | 音源 | ⚠️ ファイル未確認 | 実際の楽曲 | 30% |
 | デプロイ | ❌ ローカルのみ | Vercel公開 | 0% |
 
@@ -50,11 +51,14 @@
 - [x] ファンサリクエスト
 - [x] カスタムメッセージ送信
 
-### リアルタイム同期
-- [x] BroadcastChannel API（同一デバイス・タブ間）
-- [x] コール同期
-- [x] リクエスト同期
-- [x] メッセージ同期
+### リアルタイム同期 (機能不全)
+- [x] BroadcastChannel API (コード上に存在するが、UIと接続されていない)
+- [x] **コール・ファンサの同期** (Supabase Realtimeで実装済み ✅)
+- [ ] **選曲・フェーズの同期** (Critical ⚠️)
+    - 誰か一人が曲を選んでも他には反映されない
+    - 開始タイミングがバラバラ
+- [ ] 時刻同期（NTP）
+    - リズムゲームの判定ズレを防ぐため必須
 
 ### UI/UX
 - [x] Glassmorphismデザイン
@@ -65,17 +69,24 @@
 
 ## ⚠️ 部分的に実装済み
 
-### 1. リアルタイム同期
+### 1. 通信・同期アーキテクチャ
 | 現状 | 理想 |
 |------|------|
-| BroadcastChannel API | WebSocket (Socket.IO) |
-| 同一デバイス・タブ間のみ | 異なるデバイス間で完全同期 |
-| サーバー不要 | WebSocketサーバー必要 |
+| BroadcastChannel (未稼働) | **WebSocket (Signaling/Room)** + **WebRTC (Realtime)** |
+| 状態管理がローカルのみ | サーバー側でRoom状態を管理 (Single Source of Truth) |
+| 時刻同期なし | **NTP (Network Time Protocol)** による高精度時刻同期 |
+| **選曲・開始同期なし** | **Supabase Realtime** で状態共有 + 一斉スタート |
 
 **必要な作業:**
-- Socket.IOサーバー構築
-- ルーム管理ロジック
-- 接続/切断ハンドリング
+- `roomStore` に `gamePhase`, `currentSongId`, `startTime` を追加
+- シンガーの操作をトリガーに状態更新イベントをブロードキャスト
+- バンド側はイベントを受け取って自動で画面遷移
+
+**必要な作業:**
+- WebSocketサーバー構築 (NestJS/Socket.IO 推奨)
+- NTPによる時刻オフセット計算ロジック
+- WebRTC (DataChannel) の検証と実装
+- `useGameStore` と `useRoomStore` の統合または連携
 
 ### 2. 音源
 | 現状 | 理想 |

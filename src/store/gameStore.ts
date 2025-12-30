@@ -1,4 +1,7 @@
+'use client';
+
 import { create } from 'zustand';
+import { supabase } from '@/lib/supabase';
 import { Room, Participant, FansaRequest, FansaType, PENLIGHT_COLORS } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,10 +16,14 @@ interface GameState {
   isPlaying: boolean;
   startTime: number | null;
   
+  // Loading state
+  isLoading: boolean;
+  error: string | null;
+  
   // Actions
   setCurrentUser: (user: Participant) => void;
-  createRoom: (hostName: string) => string;
-  joinRoom: (roomId: string, userName: string) => void;
+  createRoom: (hostName: string) => Promise<string>;
+  joinRoom: (roomId: string, userName: string) => Promise<boolean>;
   setRole: (role: 'singer' | 'audience') => void;
   startGame: () => void;
   endGame: () => void;
@@ -38,67 +45,136 @@ export const useGameStore = create<GameState>((set, get) => ({
   room: null,
   isPlaying: false,
   startTime: null,
+  isLoading: false,
+  error: null,
   
   setCurrentUser: (user) => set({ currentUser: user }),
   
-  createRoom: (hostName) => {
+  createRoom: async (hostName) => {
+    set({ isLoading: true, error: null });
+    
     const roomId = uuidv4().slice(0, 6).toUpperCase();
     const hostId = uuidv4();
-    const host: Participant = {
-      id: hostId,
-      name: hostName,
-      role: 'singer',
-      score: 0,
-      isHost: true,
-      penLightColor: PENLIGHT_COLORS[0],
-    };
     
-    const room: Room = {
-      id: roomId,
-      hostId,
-      participants: [host],
-      status: 'waiting',
-      excitementGauge: 0,
-      fansaRequests: [],
-    };
-    
-    set({ room, currentUser: host });
-    return roomId;
+    try {
+      // Create room in Supabase
+      const { error: roomError } = await supabase
+        .from('rooms')
+        .insert({
+          id: roomId,
+          host_id: hostId,
+          status: 'waiting',
+        });
+      
+      if (roomError) throw roomError;
+      
+      // Add host as participant
+      const { error: participantError } = await supabase
+        .from('participants')
+        .insert({
+          room_id: roomId,
+          user_id: hostId,
+          name: hostName,
+          role: 'singer',
+        });
+      
+      if (participantError) throw participantError;
+      
+      const host: Participant = {
+        id: hostId,
+        name: hostName,
+        role: 'singer',
+        score: 0,
+        isHost: true,
+        penLightColor: PENLIGHT_COLORS[0],
+      };
+      
+      const room: Room = {
+        id: roomId,
+        hostId,
+        participants: [host],
+        status: 'waiting',
+        excitementGauge: 0,
+        fansaRequests: [],
+      };
+      
+      set({ room, currentUser: host, isLoading: false });
+      return roomId;
+    } catch (err) {
+      console.error('Error creating room:', err);
+      set({ error: 'ルームの作成に失敗しました', isLoading: false });
+      return '';
+    }
   },
   
-  joinRoom: (roomId, userName) => {
-    const userId = uuidv4();
-    const user: Participant = {
-      id: userId,
-      name: userName,
-      role: 'audience',
-      score: 0,
-      isHost: false,
-      penLightColor: PENLIGHT_COLORS[Math.floor(Math.random() * PENLIGHT_COLORS.length)],
-    };
+  joinRoom: async (roomId, userName) => {
+    set({ isLoading: true, error: null });
     
-    set((state) => {
-      if (!state.room) {
-        // In real app, would fetch room from server
-        const room: Room = {
-          id: roomId,
-          hostId: '',
-          participants: [user],
-          status: 'waiting',
-          excitementGauge: 0,
-          fansaRequests: [],
-        };
-        return { room, currentUser: user };
+    const userId = uuidv4();
+    
+    try {
+      // Check if room exists
+      const { data: roomData, error: roomError } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('id', roomId)
+        .single();
+      
+      if (roomError || !roomData) {
+        set({ error: 'ルームが見つかりません', isLoading: false });
+        return false;
       }
       
-      return {
-        room: {
-          ...state.room,
-          participants: [...state.room.participants, user],
-        },
-        currentUser: user,
+      // Add participant
+      const { error: participantError } = await supabase
+        .from('participants')
+        .insert({
+          room_id: roomId,
+          user_id: userId,
+          name: userName,
+          role: 'audience',
+        });
+      
+      if (participantError) throw participantError;
+      
+      // Get all participants
+      const { data: participants } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('room_id', roomId);
+      
+      const user: Participant = {
+        id: userId,
+        name: userName,
+        role: 'audience',
+        score: 0,
+        isHost: false,
+        penLightColor: PENLIGHT_COLORS[Math.floor(Math.random() * PENLIGHT_COLORS.length)],
       };
-    });
+      
+      const room: Room = {
+        id: roomId,
+        hostId: roomData.host_id,
+        participants: participants?.map(p => ({
+          id: p.user_id,
+          name: p.name,
+          role: p.role as 'singer' | 'band' | 'audience',
+          score: p.score || 0,
+          isHost: p.user_id === roomData.host_id,
+          penLightColor: PENLIGHT_COLORS[0],
+        })) || [user],
+        status: roomData.status as 'waiting' | 'playing' | 'finished',
+        excitementGauge: 0,
+        fansaRequests: [],
+      };
+      
+      set({ room, currentUser: user, isLoading: false });
+      return true;
+    } catch (err) {
+      console.error('Error joining room:', err);
+      set({ error: 'ルームへの参加に失敗しました', isLoading: false });
+      return false;
+    }
   },
   
   setRole: (role) => {

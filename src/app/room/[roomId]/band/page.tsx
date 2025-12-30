@@ -17,8 +17,20 @@ export default function BandPlayPage() {
   const params = useParams();
   const roomId = params.roomId as string;
 
-  const [phase, setPhase] = useState<GamePhase>('song-select');
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const { 
+    initRoom, 
+    gamePhase, 
+    currentSongId, 
+    startTime,
+    activeRequests, 
+    activeCalls 
+  } = useRoomStore();
+
+  // Derive state from room store
+  const selectedSong = SONGS.find(s => s.id === currentSongId) || null;
+  const isReady = useRoomStore(s => s.isConnected); // Check connection
+
+  // Local state for instrument selection and temporary waiting state
   const [selectedInstrument, setSelectedInstrument] = useState<InstrumentType | null>(null);
   const [countdown, setCountdown] = useState(3);
   const [score, setScore] = useState(0);
@@ -28,10 +40,22 @@ export default function BandPlayPage() {
 
   const difficulty: Difficulty = 'easy';
 
-  const handleSongSelect = (song: Song) => {
-    setSelectedSong(song);
-    setPhase('instrument-select');
+  // Join room on mount to receive song updates
+  useEffect(() => {
+    initRoom(roomId, 'バンドメンバー', 'band');
+  }, [roomId, initRoom]);
+
+  // Determine local UI phase based on shared gamePhase and local selection
+  const getUiPhase = (): GamePhase => {
+    if (gamePhase === 'song-select') return 'song-select';
+    if (gamePhase === 'ready') return 'instrument-select'; // Show instrument select when song is ready
+    if (gamePhase === 'countdown') return 'countdown';
+    if (gamePhase === 'playing') return 'playing';
+    if (gamePhase === 'finished') return 'finished';
+    return 'song-select';
   };
+  
+  const uiPhase = getUiPhase();
 
   const handleMvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,45 +75,62 @@ export default function BandPlayPage() {
   const handleInstrumentSelect = async (instrument: InstrumentType) => {
     setSelectedInstrument(instrument);
     
-    // Initialize room sync with instrument
+    // Update room presence with instrument info
+    // Re-initializing room with instrument info. 
+    // In a better implementation, we would have a dedicated updatePlayerInfo action.
     useRoomStore.getState().initRoom(roomId, INSTRUMENT_INFO[instrument].label, 'band', instrument);
     
-    setPhase('countdown');
-
-    for (let i = 3; i > 0; i--) {
-      setCountdown(i);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
-    setPhase('playing');
-    
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      try {
-        await audioRef.current.play();
-      } catch (e) {
-        console.error('Audio playback failed:', e);
-      }
-    }
+    // We don't advance phase manually, we wait for singer to start (gamePhase -> countdown)
   };
+
+  // Handle countdown sync
+  useEffect(() => {
+    if (uiPhase === 'countdown' && startTime) {
+      const now = Date.now();
+      const delay = Math.max(0, startTime - now);
+      
+      let count = 3;
+      setCountdown(count);
+        
+      const countInterval = setInterval(() => {
+        count--;
+        if (count > 0) setCountdown(count);
+      }, (delay / 3));
+
+      const timer = setTimeout(async () => {
+        clearInterval(countInterval);
+        
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          try {
+            await audioRef.current.play();
+          } catch (e) {
+            console.error('Audio playback failed:', e);
+          }
+        }
+      }, delay);
+
+      return () => {
+        clearTimeout(timer);
+        clearInterval(countInterval);
+      };
+    }
+  }, [uiPhase, startTime]);
 
   const handleScoreUpdate = useCallback((newScore: number) => {
     setScore(newScore);
   }, []);
 
   const handleGameEnd = useCallback(() => {
-    setPhase('finished');
+    // Phase will be updated by singer broadcasting 'finished' or we just show result locally
+    // For now, let's keep local transition to result screen
     setTimeout(() => {
       router.push(`/room/${roomId}/result?score=${score}&instrument=${selectedInstrument}&song=${selectedSong?.title}`);
     }, 2000);
   }, [router, roomId, score, selectedInstrument, selectedSong]);
 
   const handleBack = () => {
-    if (phase === 'instrument-select') {
-      setPhase('song-select');
-    } else {
-      router.push(`/room/${roomId}`);
-    }
+     // No manual back navigation for now as phase is controlled by singer
   };
 
   const chart = selectedSong && selectedInstrument 
@@ -118,78 +159,19 @@ export default function BandPlayPage() {
       />
 
       {/* Song Selection */}
-      {phase === 'song-select' && (
+      {uiPhase === 'song-select' && (
         <div className="flex-1 flex flex-col p-6 overflow-auto">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-white mb-2">曲を選択</h1>
             <p className="text-white/50 text-sm">演奏したい曲を選んでください</p>
           </div>
 
-          {/* MV Upload Section */}
-          <div className="mb-6 p-4 rounded-2xl backdrop-blur-md bg-white/5 border border-white/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-white font-medium text-sm">🎬 MV映像（オプション）</h3>
-                <p className="text-white/40 text-xs mt-1">
-                  {mvUrl ? '映像がセットされています' : 'MP4をアップロードして背景に表示'}
-                </p>
-              </div>
-              {mvUrl ? (
-                <div className="flex gap-2">
-                  <span className="text-green-400 text-sm">✓ 設定済み</span>
-                  <button
-                    onClick={handleRemoveMv}
-                    className="text-red-400 text-sm hover:text-red-300"
-                  >
-                    削除
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 rounded-lg bg-purple-600/50 text-white text-sm hover:bg-purple-600/70 transition-colors"
-                >
-                  アップロード
-                </button>
-              )}
-            </div>
-            {mvUrl && (
-              <div className="mt-3 rounded-lg overflow-hidden h-20 bg-black/50">
-                <video 
-                  src={mvUrl} 
-                  className="w-full h-full object-cover opacity-60"
-                  muted
-                />
-              </div>
-            )}
-          </div>
-
           <div className="space-y-4">
-            {SONGS.map((song, index) => (
-              <motion.button
-                key={song.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSongSelect(song)}
-                className="w-full p-5 rounded-2xl backdrop-blur-md bg-white/8 border border-white/15 hover:bg-white/15 transition-all text-left"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="text-4xl">{song.coverEmoji}</span>
-                  <div className="flex-1">
-                    <h3 className="text-white font-semibold text-lg">{song.title}</h3>
-                    <p className="text-white/50 text-sm">{song.artist}</p>
-                    <div className="flex gap-3 mt-1 text-xs text-white/40">
-                      <span>BPM {song.bpm}</span>
-                      <span>•</span>
-                      <span>{song.genre}</span>
-                    </div>
-                  </div>
-                  <div className="text-white/30 text-2xl">→</div>
-                </div>
-              </motion.button>
-            ))}
+             {/* Show message instead of song list */}
+             <div className="text-center py-10">
+               <div className="text-6xl mb-4">🎤</div>
+               <p className="text-white/60">シンガーが選曲中です...</p>
+             </div>
           </div>
 
           <button
@@ -202,7 +184,7 @@ export default function BandPlayPage() {
       )}
 
       {/* Instrument Selection */}
-      {phase === 'instrument-select' && (
+      {uiPhase === 'instrument-select' && (
         <InstrumentSelect 
           onSelect={handleInstrumentSelect}
           onBack={handleBack}
@@ -210,7 +192,7 @@ export default function BandPlayPage() {
       )}
 
       {/* Countdown */}
-      {phase === 'countdown' && selectedInstrument && selectedSong && (
+      {uiPhase === 'countdown' && selectedInstrument && selectedSong && (
         <div className="flex-1 flex items-center justify-center">
           <motion.div
             key={countdown}
@@ -245,20 +227,104 @@ export default function BandPlayPage() {
         </div>
       )}
 
+      {/* Countdown without instrument - show waiting */}
+      {uiPhase === 'countdown' && !selectedInstrument && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-6xl mb-4">🎸</div>
+            <h2 className="text-2xl font-bold text-white mb-2">演奏が始まります！</h2>
+            <p className="text-white/60">楽器を選んで参加してください</p>
+            <div className="mt-6">
+              <InstrumentSelect 
+                onSelect={handleInstrumentSelect}
+                onBack={() => {}}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Playing */}
-      {phase === 'playing' && selectedInstrument && chart && (
-        <BandGame 
-          chart={chart}
-          instrument={selectedInstrument}
-          audioRef={audioRef}
-          mvUrl={mvUrl}
-          onScoreUpdate={handleScoreUpdate}
-          onGameEnd={handleGameEnd}
-        />
+      {uiPhase === 'playing' && selectedInstrument && chart && (
+        <div className="relative flex-1">
+          <BandGame 
+            chart={chart}
+            instrument={selectedInstrument}
+            audioRef={audioRef}
+            mvUrl={mvUrl}
+            onScoreUpdate={handleScoreUpdate}
+            onGameEnd={handleGameEnd}
+          />
+          {/* Pause/Rest Button */}
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setSelectedInstrument(null)}
+            className="absolute top-4 right-4 z-50 bg-black/40 backdrop-blur-md text-white/80 px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 hover:bg-black/60 transition-colors"
+          >
+            <span>☕</span> 休憩する
+          </motion.button>
+        </div>
+      )}
+
+      {/* Playing without instrument - spectator mode */}
+      {uiPhase === 'playing' && (!selectedInstrument || !chart) && (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-orbs relative">
+          
+          {/* Main Spectator UI */}
+          <div className="text-center z-10">
+            <motion.div 
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+              className="text-6xl mb-4"
+            >
+              🎤
+            </motion.div>
+            <h2 className="text-2xl font-bold text-white mb-2">演奏中...</h2>
+            {selectedSong && (
+              <p className="text-white/60 mb-8">
+                {selectedSong.coverEmoji} {selectedSong.title}
+              </p>
+            )}
+            
+            {/* Join Band Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                // Return to instrument selection or open modal
+                // Ideally, we show instrument select directly here or navigate back.
+                // Since this is a temporary state during 'playing', we can just show a modal or conditional render.
+                // For simplicity, let's just toggle a local 'isJoining' state or set a flag? 
+                // Actually, let's just toggle UI phase locally to 'instrument-select' OVERRIDE?
+                // No, uiPhase is derived.
+                // Easier: render InstrumentSelect right here if they want to join.
+              }}
+              className="hidden" // Placeholder logic
+            />
+
+            <div className="bg-white/5 backdrop-blur-md p-6 rounded-2xl border border-white/10 max-w-sm mx-auto">
+               <h3 className="text-white font-bold mb-4">バンドに参加する？</h3>
+               <div className="grid grid-cols-2 gap-3">
+                 {(Object.keys(INSTRUMENT_INFO) as InstrumentType[]).map((inst) => (
+                   <button
+                     key={inst}
+                     onClick={() => handleInstrumentSelect(inst)}
+                     className="flex flex-col items-center p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5"
+                   >
+                     <span className="text-2xl mb-1">{INSTRUMENT_INFO[inst].emoji}</span>
+                     <span className="text-xs text-white/70">{INSTRUMENT_INFO[inst].label}</span>
+                   </button>
+                 ))}
+               </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Finished */}
-      {phase === 'finished' && (
+      {uiPhase === 'finished' && (
         <div className="flex-1 flex items-center justify-center">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
