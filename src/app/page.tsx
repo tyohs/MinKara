@@ -7,25 +7,21 @@ import { useGameStore } from '@/store/gameStore';
 
 export default function Home() {
   const router = useRouter();
-  const { createRoom, joinRoom, isLoading, error } = useGameStore();
+  const { createRoom, joinRoom } = useGameStore();
   const [mode, setMode] = useState<'home' | 'create' | 'join'>('home');
   const [name, setName] = useState('');
   const [roomCode, setRoomCode] = useState('');
 
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!name.trim()) return;
-    const roomId = await createRoom(name);
-    if (roomId) {
-      router.push(`/room/${roomId}`);
-    }
+    const roomId = createRoom(name);
+    router.push(`/room/${roomId}`);
   };
 
-  const handleJoin = async () => {
+  const handleJoin = () => {
     if (!name.trim() || !roomCode.trim()) return;
-    const success = await joinRoom(roomCode.toUpperCase(), name);
-    if (success) {
-      router.push(`/room/${roomCode.toUpperCase()}`);
-    }
+    joinRoom(roomCode.toUpperCase(), name);
+    router.push(`/room/${roomCode.toUpperCase()}`);
   };
 
   return (
@@ -95,13 +91,12 @@ export default function Home() {
               </button>
               <button
                 onClick={handleCreate}
-                disabled={!name.trim() || isLoading}
+                disabled={!name.trim()}
                 className="btn-primary flex-1 disabled:opacity-40"
               >
-                {isLoading ? '作成中...' : '作成'}
+                作成
               </button>
             </div>
-            {error && <p className="text-red-400 text-sm text-center mt-4">{error}</p>}
           </motion.div>
         )}
 
@@ -137,13 +132,12 @@ export default function Home() {
               </button>
               <button
                 onClick={handleJoin}
-                disabled={!name.trim() || !roomCode.trim() || isLoading}
+                disabled={!name.trim() || !roomCode.trim()}
                 className="btn-primary flex-1 disabled:opacity-40"
               >
-                {isLoading ? '参加中...' : '参加'}
+                参加
               </button>
             </div>
-            {error && <p className="text-red-400 text-sm text-center mt-4">{error}</p>}
           </motion.div>
         )}
       </motion.div>
