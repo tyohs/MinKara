@@ -99,13 +99,18 @@
 - ゲーム画面の背景レイヤーに表示（opacity: 50%）
 - オーディオと自動同期（±100ms以上ずれたら同期）
 
-### 2.6 リアルタイム同期
-- BroadcastChannel APIによるタブ間通信
-- 同期対象：
-  - プレイヤー参加/退出
-  - コール発動
-  - リクエスト送信
-  - カスタムメッセージ
+### 2.6 リアルタイム同期・通信
+- **ハイブリッド通信アーキテクチャ**:
+  - **WebSocket (Signaling/Room)**: ルーム入退室、チャット、状態管理（信頼性重視）
+  - **WebRTC (DataChannel)**: リズムゲーム判定、コール、エフェクト同期（低遅延重視）
+- **高精度時刻同期**:
+  - **NTP (Network Time Protocol)**: サーバーとの時刻オフセットを計算し、全クライアントの時刻を統一基準に補正
+  - 目標同期精度: ±10ms〜20ms
+- **同期対象**:
+  - プレイヤー参加/退出 (WebSocket)
+  - ルームフェーズ遷移 (WebSocket)
+  - コール/リクエスト発動 (WebRTC)
+  - 判定結果/スコア更新 (WebRTC)
 
 ---
 
@@ -123,14 +128,20 @@
 ## 4. 技術仕様
 
 ### 4.1 技術スタック
-| カテゴリ | 技術 |
-|---------|------|
-| フレームワーク | Next.js 16 (App Router) |
-| 言語 | TypeScript |
-| スタイリング | Tailwind CSS |
-| アニメーション | Framer Motion |
-| 状態管理 | Zustand |
-| リアルタイム通信 | BroadcastChannel API |
+| カテゴリ | 技術 | 備考 |
+|---------|------|------|
+| **フロントエンド** | Next.js 15 (App Router) | Vercel でホスト |
+| 言語 | TypeScript | - |
+| スタイリング | Tailwind CSS | - |
+| アニメーション | Framer Motion | - |
+| 状態管理 | Zustand | - |
+| **バックエンド** | Supabase | - |
+| リアルタイム通信 | Supabase Realtime (Broadcast) | WebSocket ベース |
+| 時刻同期 | NTP (custom) | 将来実装予定 |
+| **BaaS** | Supabase | - |
+| 認証 | Supabase Auth | Google/LINE/匿名対応 |
+| データベース | Supabase (PostgreSQL) | ルーム状態、スコア履歴 |
+| ストレージ | Supabase Storage | 音源ファイル |
 
 ### 4.2 ディレクトリ構成
 ```
