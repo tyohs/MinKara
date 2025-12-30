@@ -1,6 +1,6 @@
 // Core types for ENCORE band app
 
-export type Role = 'singer' | 'audience';
+export type Role = 'singer' | 'band' | 'audience';
 export type RoomStatus = 'waiting' | 'playing' | 'finished';
 export type FansaType = 'kiss' | 'point' | 'heart' | 'wave' | 'peace';
 
@@ -92,3 +92,14 @@ export const PENLIGHT_COLORS = [
   '#A8D8EA', // Sky Blue
 ];
 
+
+export interface Reservation {
+  id: string;
+  room_id: string;
+  user_id: string;
+  song_id: string;
+  status: 'pending' | 'playing' | 'history' | 'cancelled';
+  created_at: string;
+  user_name?: string; // For display, joined from participants
+  song_title?: string; // For display, joined from SONGS
+}
