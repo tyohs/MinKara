@@ -1,164 +1,493 @@
 @import "tailwindcss";
 
+/* ===== MINKARA DESIGN SYSTEM ===== */
+/* Warm & Inviting - 暖色系で「みんなで楽しもう！」 */
+
 :root {
-  --background: #0f0c29;
-  --foreground: #ffffff;
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.15);
-  --accent-primary: #a855f7;
-  --accent-secondary: #3b82f6;
+  /* === Warm Palette === */
+  --primary: #f97316;          /* オレンジ - メイン */
+  --primary-light: #fb923c;
+  --primary-dark: #ea580c;
+  --secondary: #ef4444;        /* レッド - アクセント */
+  --accent: #fbbf24;           /* ゴールド/イエロー */
+  --accent-light: #fcd34d;
+  --coral: #fb7185;            /* コーラルピンク */
+  --peach: #fda4af;            /* ピーチ */
+  
+  /* === Warm Background === */
+  --background: #fffbeb;       /* クリーム */
+  --background-warm: #fef3c7;  /* ウォームイエロー */
+  --surface: #ffffff;
+  --surface-warm: #fff7ed;     /* ウォームホワイト */
+  
+  /* === State Colors (Warm tones) === */
+  --success: #84cc16;          /* ライム - PERFECT */
+  --great: #fbbf24;            /* ゴールド - GREAT */
+  --good: #fb923c;             /* オレンジ - GOOD */
+  --miss: #f87171;             /* ライトレッド - MISS */
+  
+  /* === Text === */
+  --text-primary: #7c2d12;     /* ダークオレンジブラウン */
+  --text-secondary: #a16207;   /* アンバー */
+  --text-muted: #d97706;
+  --text-on-dark: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-foreground: var(--text-primary);
+  --font-sans: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Glassmorphism background */
+/* ===== BASE ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+}
+
 body {
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-  color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Noto Sans JP', system-ui, sans-serif;
   min-height: 100vh;
 }
 
-/* Mobile-first */
-html, body {
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: touch;
-  touch-action: manipulation;
+/* ===== WARM SUNNY BACKGROUND ===== */
+.bg-warm {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: linear-gradient(
+    135deg,
+    #fffbeb 0%,
+    #fef3c7 25%,
+    #fed7aa 50%,
+    #fecaca 75%,
+    #fff7ed 100%
+  );
+  background-size: 400% 400%;
+  animation: warm-shift 20s ease infinite;
 }
 
+@keyframes warm-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Floating warm orbs */
+.orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: -5;
+}
+
+.orb-1 {
+  width: 350px;
+  height: 350px;
+  background: var(--primary);
+  top: -10%;
+  right: 5%;
+  animation: float-warm 22s ease-in-out infinite;
+}
+
+.orb-2 {
+  width: 280px;
+  height: 280px;
+  background: var(--accent);
+  bottom: 5%;
+  left: 0%;
+  animation: float-warm 28s ease-in-out infinite reverse;
+}
+
+.orb-3 {
+  width: 200px;
+  height: 200px;
+  background: var(--coral);
+  top: 50%;
+  left: 60%;
+  animation: float-warm 18s ease-in-out infinite;
+  animation-delay: -5s;
+}
+
+@keyframes float-warm {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--surface);
+  border-radius: 24px;
+  box-shadow: 
+    0 4px 20px rgba(249, 115, 22, 0.1),
+    0 0 0 1px rgba(249, 115, 22, 0.05);
+}
+
+.card-warm {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-warm) 100%);
+  border-radius: 28px;
+  box-shadow: 
+    0 10px 40px rgba(249, 115, 22, 0.12),
+    0 0 0 1px rgba(249, 115, 22, 0.08);
+}
+
+/* ===== BUTTONS ===== */
+.btn-primary {
+  position: relative;
+  padding: 16px 48px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 6px 24px rgba(249, 115, 22, 0.4),
+    0 2px 8px rgba(239, 68, 68, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 12px 35px rgba(249, 115, 22, 0.45),
+    0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  padding: 16px 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--surface);
+  border: 2px solid var(--primary-light);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.1);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-warm);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(249, 115, 22, 0.15);
+}
+
+/* ===== INSTRUMENT CARDS ===== */
+.instrument-card {
+  position: relative;
+  padding: 36px 28px;
+  background: var(--surface);
+  border: 3px solid transparent;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 24px rgba(249, 115, 22, 0.1);
+  overflow: hidden;
+}
+
+.instrument-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 0;
+}
+
+.instrument-card:hover {
+  transform: translateY(-8px) rotate(-1deg);
+  box-shadow: 0 20px 50px rgba(249, 115, 22, 0.2);
+}
+
+.instrument-card:hover::before {
+  opacity: 0.06;
+}
+
+.instrument-card.selected {
+  border-color: var(--primary);
+  box-shadow: 
+    0 10px 40px rgba(249, 115, 22, 0.3),
+    inset 0 0 0 2px rgba(249, 115, 22, 0.1);
+}
+
+.instrument-card.selected::before {
+  opacity: 0.1;
+}
+
+.instrument-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  color: var(--primary);
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== GAME AREA (Dark for contrast during play) ===== */
+.game-area {
+  background: linear-gradient(180deg, #7c2d12 0%, #991b1b 50%, #b45309 100%);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 60px rgba(124, 45, 18, 0.4),
+    inset 0 0 60px rgba(255, 255, 255, 0.03);
+}
+
+.lane {
+  position: relative;
+  flex: 1;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lane:first-child {
+  border-left: none;
+}
+
+.hit-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 56px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: white;
+  transition: all 0.1s ease;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.hit-button.pressed {
+  transform: scale(0.92);
+}
+
+/* ===== NOTE ===== */
+.note {
+  position: absolute;
+  width: calc(100% - 10px);
+  left: 5px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* ===== JUDGMENT ===== */
+.judgment {
+  font-weight: 900;
+  font-size: 2.2rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.judgment-perfect {
+  color: #a3e635;
+  text-shadow: 
+    0 0 20px #84cc16,
+    0 0 40px #84cc16;
+}
+
+.judgment-great {
+  color: #fcd34d;
+  text-shadow: 
+    0 0 15px #fbbf24,
+    0 0 30px #fbbf24;
+}
+
+.judgment-good {
+  color: #fdba74;
+  text-shadow: 
+    0 0 12px #fb923c;
+}
+
+.judgment-miss {
+  color: #fca5a5;
+  text-shadow: 0 0 10px #f87171;
+}
+
+/* ===== COMBO ===== */
+.combo-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 4.5rem;
+  font-weight: 900;
+  line-height: 1;
+  color: white;
+  text-shadow: 
+    0 0 25px rgba(249, 115, 22, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.combo-number.fire {
+  background: linear-gradient(135deg, #fcd34d, #fb923c, #ef4444);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.7));
+  animation: fire-pulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes fire-pulse {
+  from { filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6)); }
+  to { filter: drop-shadow(0 0 30px rgba(239, 68, 68, 0.8)); }
+}
+
+.combo-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+}
+
+/* ===== SCORE ===== */
+.score-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: white;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+  font-feature-settings: 'tnum';
+}
+
+/* ===== GAME HEADER ===== */
+.game-header {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--primary), var(--secondary));
+  border-radius: 3px;
+  box-shadow: 0 0 15px var(--primary);
+  transition: width 0.1s linear;
+}
+
+/* ===== RESULT SCREEN ===== */
+.result-card {
+  background: var(--surface);
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 60px rgba(249, 115, 22, 0.15),
+    0 0 0 1px rgba(249, 115, 22, 0.08);
+}
+
+.result-header {
+  padding: 32px;
+  background: linear-gradient(135deg, 
+    rgba(249, 115, 22, 0.12) 0%,
+    rgba(251, 191, 36, 0.08) 100%
+  );
+  border-bottom: 1px solid rgba(249, 115, 22, 0.1);
+}
+
+.result-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 4rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 4px 10px rgba(249, 115, 22, 0.35));
+}
+
+.stat-card {
+  background: var(--surface-warm);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  border: 1px solid rgba(249, 115, 22, 0.1);
+}
+
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* ===== TITLE STYLE ===== */
+.title-warm {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== GLASS (for overlays) ===== */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(249, 115, 22, 0.1);
+  border-radius: 16px;
+}
+
+/* ===== UTILITY ===== */
 .no-select {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
 
-/* Elegant gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #f97316 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Subtle glow */
-@keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(168, 85, 247, 0.5);
-  }
-}
-
-.glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
-
-/* Glassmorphism Primary Button */
-.btn-primary {
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.9) 0%, rgba(59, 130, 246, 0.9) 100%);
-  backdrop-filter: blur(10px);
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 1rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(168, 85, 247, 0.3);
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(168, 85, 247, 0.4);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-/* Glassmorphism Secondary Button */
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: 1rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-/* Glassmorphism Card */
-.glass-card {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-}
-
-/* Glassmorphism Input */
-.input {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  color: white;
-  font-size: 1.125rem;
-  width: 100%;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.input:focus {
-  border-color: rgba(168, 85, 247, 0.6);
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
-}
-
-.input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-/* Floating orbs background decoration */
-.bg-orbs::before,
-.bg-orbs::after {
-  content: '';
-  position: fixed;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.bg-orbs::before {
-  width: 300px;
-  height: 300px;
-  background: #a855f7;
-  top: -100px;
-  right: -100px;
-}
-
-.bg-orbs::after {
-  width: 400px;
-  height: 400px;
-  background: #3b82f6;
-  bottom: -150px;
-  left: -150px;
-}
+/* Lane colors - warm rainbow */
+.lane-1 { --lane-color: #ef4444; }  /* red */
+.lane-2 { --lane-color: #f97316; }  /* orange */
+.lane-3 { --lane-color: #fbbf24; }  /* yellow */
+.lane-4 { --lane-color: #84cc16; }  /* lime */
+.lane-5 { --lane-color: #fb7185; }  /* coral */
+.lane-6 { --lane-color: #fda4af; }  /* peach */
