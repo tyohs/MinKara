@@ -1,0 +1,43 @@
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(15, 15, 25, 0.95) 0%, rgba(15, 15, 25, 0.8) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scoreSection,
+.comboSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comboSection {
+  align-items: flex-end;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.score {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.combo {
+  font-size: 24px;
+  font-weight: 800;
+  color: #FFD700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}

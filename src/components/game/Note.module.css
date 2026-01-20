@@ -1,0 +1,48 @@
+/* 3Dトラック内のノーツ */
+.note {
+  position: absolute;
+  height: 20px;
+  background: linear-gradient(
+    180deg,
+    var(--note-glow) 0%,
+    var(--note-color) 50%,
+    var(--note-color) 100%
+  );
+  border-radius: 4px;
+  box-shadow: 
+    0 0 8px var(--note-color),
+    0 0 16px var(--note-color),
+    inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  /* 3D空間でも見やすく */
+  backface-visibility: visible;
+}
+
+.special {
+  height: 25px;
+  background: linear-gradient(
+    90deg,
+    #FFD700 0%,
+    #FFA500 30%,
+    #FF6B6B 60%,
+    #A55EEA 100%
+  );
+  box-shadow: 
+    0 0 12px #FFD700,
+    0 0 24px rgba(255, 215, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  animation: specialPulse 0.3s ease-in-out infinite alternate;
+}
+
+@keyframes specialPulse {
+  from {
+    box-shadow: 
+      0 0 12px #FFD700,
+      0 0 24px rgba(255, 215, 0, 0.5);
+  }
+  to {
+    box-shadow: 
+      0 0 20px #FFD700,
+      0 0 40px rgba(255, 215, 0, 0.7);
+  }
+}

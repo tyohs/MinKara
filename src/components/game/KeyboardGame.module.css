@@ -1,0 +1,66 @@
+/* 横向き（ランドスケープ）- 縦落ちレイアウト */
+.gameContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  background: #0a0a0f;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* スコアエリア（上部） */
+.scoreArea {
+  flex-shrink: 0;
+}
+
+/* メインエリア（ノーツ表示） */
+.mainArea {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 縦向き時の回転促進オーバーレイ */
+.rotateOverlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+  color: white;
+  text-align: center;
+  padding: 24px;
+}
+
+.rotateIcon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  animation: rotateHint 2s ease-in-out infinite;
+}
+
+@keyframes rotateHint {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(90deg); }
+  75% { transform: rotate(0deg); }
+}
+
+.rotateText {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.rotateHint {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
