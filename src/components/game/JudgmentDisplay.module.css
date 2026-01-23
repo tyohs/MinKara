@@ -1,0 +1,51 @@
+/* 画面中央に固定オーバーレイとして表示 */
+.container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.judgment {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  color: var(--judgment-color);
+  text-shadow: 
+    0 0 10px var(--judgment-color),
+    0 0 20px var(--judgment-color),
+    0 0 40px var(--judgment-color),
+    2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-transform: uppercase;
+}
+
+.combo {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.comboNumber {
+  font-size: 42px;
+  font-weight: 800;
+  color: #FFD700;
+  text-shadow: 
+    0 0 10px #FFD700,
+    0 0 20px rgba(255, 215, 0, 0.5),
+    2px 2px 4px rgba(0, 0, 0, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.comboLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 2px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}

@@ -1,0 +1,102 @@
+/* 3Dパースペクティブトラック */
+.trackWrapper {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  background: linear-gradient(180deg, #050510 0%, #0a0a18 50%, #101020 100%);
+  overflow: hidden;
+  /* 3Dパースペクティブの視点（より深い奥行き） */
+  perspective: 600px;
+  perspective-origin: 50% 100%;
+}
+
+/* 3D変換されるトラック本体（画面全体を使う） */
+.perspectiveTrack {
+  position: absolute;
+  /* 白鍵と同じ幅に揃える */
+  left: 4px;
+  right: 4px;
+  /* 画面外の遥か上まで伸ばして奥行きを最大化 */
+  top: -200%;
+  bottom: 20px;
+  /* 3D回転（50度でバランス良く） */
+  transform: rotateX(50deg);
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+}
+
+/* レーンコンテナ */
+.lanes {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 2px;
+}
+
+/* 各レーン（色付き背景） */
+.lane {
+  flex: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(20, 20, 40, 0.7) 60%,
+    rgba(40, 40, 80, 0.5) 100%
+  );
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.lane:first-child {
+  border-left: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.lane:last-child {
+  border-right: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+/* レーン区切り線 */
+.laneLines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+}
+
+.laneLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  transform: translateX(-50%);
+}
+
+/* 判定ラインコンテナ（3Dの外、白鍵と揃える） */
+.hitLineContainer {
+  position: absolute;
+  /* 白鍵と同じ幅 */
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 20px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+
+/* 各レーンのヒットゾーン */
+.hitZone {
+  flex: 1;
+  background: var(--zone-color);
+  opacity: 0.85;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 
+    0 0 10px var(--zone-color),
+    0 0 25px var(--zone-color),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
