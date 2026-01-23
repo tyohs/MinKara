@@ -31,7 +31,7 @@ export default function KeyboardGame({
   const [currentTime, setCurrentTime] = useState(0);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [maxCombo, setMaxCombo] = useState(0);
+  const [, setMaxCombo] = useState(0); // For future use
   const [lastJudgment, setLastJudgment] = useState<JudgmentType | null>(null);
   const [isLandscape, setIsLandscape] = useState(true);
   
@@ -121,6 +121,15 @@ export default function KeyboardGame({
       navigator.vibrate(VIBRATION_DURATION[judgment]);
     }
   }, [notes, currentTime, combo, showJudgment]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (judgmentTimeoutRef.current) {
+        clearTimeout(judgmentTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ミス判定
   useEffect(() => {

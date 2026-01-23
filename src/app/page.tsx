@@ -16,6 +16,8 @@ export default function HomePage() {
         muted
         playsInline
         aria-hidden="true"
+        role="presentation"
+        title="Background animation"
       >
         <source src="/background2.mp4" type="video/mp4" />
       </video>
