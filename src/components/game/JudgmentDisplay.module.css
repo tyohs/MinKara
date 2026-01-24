@@ -1,51 +1,126 @@
-/* 画面中央に固定オーバーレイとして表示 */
+/* Miss時の画面フラッシュ */
+.missFlash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 0, 0, 0.2) 0%,
+    rgba(255, 0, 0, 0.4) 50%,
+    rgba(139, 0, 0, 0.5) 100%
+  );
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* 画面中央に表示 (絶対配置) */
 .container {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 40%;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 16px;
   pointer-events: none;
-  z-index: 50;
+  z-index: 100;
+  /* 影をつけて視認性を確保 */
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));
 }
 
-.judgment {
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  color: var(--judgment-color);
-  text-shadow: 
-    0 0 10px var(--judgment-color),
-    0 0 20px var(--judgment-color),
-    0 0 40px var(--judgment-color),
-    2px 2px 4px rgba(0, 0, 0, 0.5);
-  text-transform: uppercase;
-}
-
+/* コンボ表示（上） */
 .combo {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
 }
 
 .comboNumber {
-  font-size: 42px;
-  font-weight: 800;
+  font-size: 64px;
+  font-weight: 900;
   color: #FFD700;
   text-shadow: 
     0 0 10px #FFD700,
-    0 0 20px rgba(255, 215, 0, 0.5),
-    2px 2px 4px rgba(0, 0, 0, 0.5);
+    0 0 20px rgba(255, 215, 0, 0.5);
   font-variant-numeric: tabular-nums;
 }
 
 .comboLabel {
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  font-weight: 800;
+  color: #FFF;
+  letter-spacing: 4px;
+}
+
+/* 判定表示ラッパー */
+.judgmentWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 判定表示（下） */
+.judgment {
+  font-family: 'Outfit', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
   letter-spacing: 2px;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  
+  /* グラデーション文字のベース設定 */
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
+}
+
+/* Perfect - 青緑〜白のグラデーション + 強い光彩 */
+.judgment.perfect {
+  background-image: linear-gradient(180deg, #FFFFFF 20%, #4ADE80 80%);
+  filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.8))
+          drop-shadow(0 0 20px rgba(74, 222, 128, 0.4));
+}
+
+/* Great - ピンク〜白のグラデーション */
+.judgment.great {
+  background-image: linear-gradient(180deg, #FFFFFF 20%, #F472B6 80%);
+  filter: drop-shadow(0 0 10px rgba(244, 114, 182, 0.8))
+          drop-shadow(0 0 20px rgba(244, 114, 182, 0.4));
+}
+
+/* Good - 黄〜白のグラデーション */
+.judgment.good {
+  background-image: linear-gradient(180deg, #FFFFFF 20%, #FACC15 80%);
+  filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.8))
+          drop-shadow(0 0 20px rgba(250, 204, 21, 0.4));
+}
+
+/* Miss - 赤単色ではないが、暗めのグラデーション */
+.judgment.miss {
+  background-image: linear-gradient(180deg, #FFFFFF 20%, #EF4444 80%);
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.8));
+  animation: missShake 0.2s ease-out;
+}
+
+@keyframes missShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 480px) {
+  .comboNumber {
+    font-size: 48px;
+  }
+  .judgment {
+    font-size: 32px;
+  }
 }

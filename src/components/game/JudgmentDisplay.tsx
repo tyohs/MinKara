@@ -7,42 +7,70 @@ import styles from './JudgmentDisplay.module.css';
 interface JudgmentDisplayProps {
   judgment: JudgmentType | null;
   combo: number;
+  judgmentId: number;
 }
 
-export default function JudgmentDisplay({ judgment, combo }: JudgmentDisplayProps) {
+export default function JudgmentDisplay({ judgment, combo, judgmentId }: JudgmentDisplayProps) {
+  const isMiss = judgment === 'miss';
+  
   return (
-    <div className={styles.container}>
-      <AnimatePresence mode="wait">
-        {judgment && (
+    <>
+      {/* Miss時の画面フラッシュ */}
+      <AnimatePresence>
+        {isMiss && (
           <motion.div
-            key={`${judgment}-${Date.now()}`}
-            className={styles.judgment}
-            style={{ 
-              '--judgment-color': JUDGMENT_CONFIG[judgment].color,
-            } as React.CSSProperties}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.3 }}
-            transition={{ duration: 0.15 }}
-          >
-            {JUDGMENT_CONFIG[judgment].text}
-          </motion.div>
+            key={`miss-${judgmentId}`}
+            className={styles.missFlash}
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
         )}
       </AnimatePresence>
 
-      {/* コンボ表示（常に表示、10以上で強調） */}
-      {combo > 0 && (
-        <motion.div 
-          className={styles.combo}
-          key={combo}
-          initial={{ scale: 1.2 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.1 }}
-        >
-          <span className={styles.comboNumber}>{combo}</span>
-          <span className={styles.comboLabel}>COMBO</span>
-        </motion.div>
-      )}
-    </div>
+      <div className={styles.container}>
+        {/* コンボ表示（上） */}
+        <AnimatePresence>
+          {combo >= 5 && (
+            <motion.div 
+              className={styles.combo}
+              initial={{ opacity: 0, scale: 0.5, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.5, y: -20 }}
+            >
+              <motion.span 
+                className={styles.comboNumber}
+                key={combo}
+                initial={{ scale: 1.5 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.1 }}
+              >
+                {combo}
+              </motion.span>
+              <span className={styles.comboLabel}>COMBO</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 判定表示（下） */}
+        <AnimatePresence mode="popLayout">
+          {judgment && (
+            <motion.div
+              key={`${judgment}-${judgmentId}`}
+              className={styles.judgmentWrapper}
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <span className={`${styles.judgment} ${styles[judgment]}`}>
+                {JUDGMENT_CONFIG[judgment].text}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }
