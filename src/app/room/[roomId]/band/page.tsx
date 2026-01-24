@@ -1,18 +1,30 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { KeyboardGame } from '@/components/game';
 import { generateDemoChart, getChartForSong } from '@/data/charts';
+import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
+import { submitScore, getUserId } from '@/hooks/useSubmitScore';
 import { getNotesFromPosition } from '@/lib/noteGenerator';
 
 export default function BandPage() {
   const params = useParams();
+  const router = useRouter();
   const roomId = params.roomId as string;
   
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
+  const [gameEnded, setGameEnded] = useState(false);
+
+  // 曲データを取得
+  const song = useMemo(() => {
+    if (session?.song_id) {
+      return getSongById(session.song_id);
+    }
+    return null;
+  }, [session?.song_id]);
 
   // 譜面データを取得
   const chart = useMemo(() => {
@@ -22,6 +34,9 @@ export default function BandPage() {
     // デモ用譜面
     return generateDemoChart();
   }, [session?.song_id]);
+
+  // デモモードの場合のduration（約32秒）
+  const songDuration = song?.duration ?? 32;
 
   // 途中参加の場合、経過時間以降のノーツのみを取得
   const activeNotes = useMemo(() => {
@@ -45,10 +60,29 @@ export default function BandPage() {
   }, [session]);
 
   // ゲーム終了時のコールバック
-  const handleGameEnd = (score: number, maxCombo: number) => {
+  const handleGameEnd = useCallback(async (score: number, maxCombo: number) => {
+    if (gameEnded) return;
+    setGameEnded(true);
+
     console.log('Game ended:', { score, maxCombo });
-    // TODO: スコアをサーバーに送信
-  };
+
+    // スコアを送信（セッションがある場合のみ）
+    if (session?.id) {
+      const userId = getUserId();
+      await submitScore({
+        roomId,
+        sessionId: session.id,
+        userId,
+        score,
+        maxCombo,
+      });
+    }
+
+    // リザルト画面へ遷移（3秒後）
+    setTimeout(() => {
+      router.push(`/room/${roomId}`);
+    }, 3000);
+  }, [session, roomId, router, gameEnded]);
 
   if (!isReady) {
     return (
@@ -64,11 +98,26 @@ export default function BandPage() {
     );
   }
 
+  if (gameEnded) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0a0a0f] text-white">
+        <div className="text-center">
+          <div className="text-4xl font-bold mb-4">🎉 演奏完了！</div>
+          <div className="text-lg text-gray-400">
+            ルームに戻ります...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <KeyboardGame
       notes={activeNotes}
       songStartedAt={session?.song_started_at ?? new Date().toISOString()}
+      songDuration={songDuration}
       onGameEnd={handleGameEnd}
     />
   );
 }
+

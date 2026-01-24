@@ -54,59 +54,116 @@ body {
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 340px;
+  max-width: 500px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 8px;
 }
 
 /* ===== LOGO ===== */
 .home-logo {
-  width: 240px;
+  width: 100%;
+  max-width: 432px;
   height: auto;
   filter: drop-shadow(0 6px 20px rgba(255, 126, 95, 0.25));
+}
+
+.home-catchcopy {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  margin-top: -25%; /* Relative positioning for responsiveness */
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1));
 }
 
 /* ===== BUTTONS ===== */
 .home-nav {
   width: 100%;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
 }
 
 .home-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  padding: 14px 18px;
+  padding: 18px 24px;
   background: var(--white);
-  border: 3px solid var(--coral);
-  border-radius: 18px;
+  border: none;
+  border-radius: 28px;
   font-family: var(--font-main);
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(255, 126, 95, 0.2);
-  text-align: left;
-  transition: transform 0.15s, box-shadow 0.15s;
+  
+  /* 3D Pop Style */
+  position: relative;
+  transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 
+    0 -4px 0 rgba(0,0,0,0.1) inset, /* Inner Highlight */
+    0 8px 0 #E2E2E2, /* 3D Side (Gray) */
+    0 12px 20px rgba(0, 0, 0, 0.15); /* Drop Shadow */
 }
 
+/* Hover State - Lift slightly */
 .home-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 126, 95, 0.3);
+  box-shadow: 
+    0 -4px 0 rgba(0,0,0,0.1) inset,
+    0 10px 0 #E2E2E2, 
+    0 16px 25px rgba(0, 0, 0, 0.2);
 }
 
-.home-btn.primary {
-  background: linear-gradient(135deg, var(--coral), var(--coral-pink));
-  border-color: var(--coral-pink);
+/* Active State - Press down */
+.home-btn:active {
+  transform: translateY(8px);
+  box-shadow: 
+    0 -2px 0 rgba(0,0,0,0.1) inset,
+    0 0 0 #E2E2E2, /* No side visible */
+    0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
+/* Primary Button (Create Room) */
+.home-btn.primary {
+  background: linear-gradient(to bottom, #FF8E9E, #FF6B8A);
+  
+  /* 3D Side for Primary */
+  box-shadow: 
+    0 -4px 0 rgba(0,0,0,0.2) inset,
+    0 8px 0 #D14763, 
+    0 12px 20px rgba(255, 107, 138, 0.4);
+}
+
+.home-btn.primary:hover {
+  box-shadow: 
+    0 -4px 0 rgba(0,0,0,0.2) inset,
+    0 10px 0 #D14763,
+    0 16px 25px rgba(255, 107, 138, 0.5);
+}
+
+.home-btn.primary:active {
+  box-shadow: 
+    0 -2px 0 rgba(0,0,0,0.2) inset,
+    0 0 0 #D14763,
+    0 2px 4px rgba(255, 107, 138, 0.3);
+}
+
 
 .home-btn-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   object-fit: contain;
+  background: rgba(255, 255, 255, 0.2); /* Subtle backing */
+  padding: 6px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.home-btn.primary .home-btn-icon {
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .home-btn-text {
@@ -115,50 +172,43 @@ body {
 
 .home-btn-title {
   display: block;
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 1.25rem;
   color: var(--gray-900);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
 }
 
 .home-btn-desc {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--gray-600);
-  margin-top: 2px;
+  margin-top: 4px;
+  font-weight: 600;
 }
 
-.home-btn.primary .home-btn-title,
-.home-btn.primary .home-btn-desc {
+.home-btn.primary .home-btn-title {
   color: var(--white);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.1);
+}
+
+.home-btn.primary .home-btn-desc {
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.1);
 }
 
 .home-btn-arrow {
-  font-size: 1.1rem;
-  color: var(--coral);
+  font-size: 1.5rem;
+  color: var(--coral-pink);
+  font-weight: 900;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.1);
 }
 
 .home-btn.primary .home-btn-arrow {
   color: var(--white);
 }
 
-/* ===== BADGE ===== */
-.home-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 16px;
-  background: var(--white);
-  border: 2px solid var(--orange);
-  border-radius: 100px;
-  font-weight: 600;
-  font-size: 0.8rem;
-  color: var(--orange);
-}
-
-.home-badge svg {
-  width: 16px;
-  height: 16px;
-}
+/* Badge styles removed */
 
 /* ===== NO DECORATIVE ICONS FOR NOW ===== */
 /* Decorative icons removed temporarily to fix layout */

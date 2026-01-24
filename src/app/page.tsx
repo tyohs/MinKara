@@ -19,17 +19,27 @@ export default function HomePage() {
         role="presentation"
         title="Background animation"
       >
-        <source src="/background2.mp4" type="video/mp4" />
+        <source src="/video/background-monochrome.mp4" type="video/mp4" />
       </video>
 
       <div className="home-container">
         {/* Logo */}
         <Image
-          src="/logo-main.png"
+          src="/images/logo.png"
           alt="MinKara - みんなでカラオケをプレイしよう"
-          width={480}
-          height={480}
+          width={800}
+          height={800}
           className="home-logo"
+          priority
+        />
+        
+        {/* Catchcopy */}
+        <Image
+          src="/images/catchcopy.png"
+          alt="みんなでカラオケをプレイしよう"
+          width={600}
+          height={200}
+          className="home-catchcopy"
           priority
         />
 
@@ -72,16 +82,7 @@ export default function HomePage() {
           </button>
         </nav>
 
-        {/* Badge */}
-        <div className="home-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-          <span>3〜10人でプレイ</span>
-        </div>
+
       </div>
     </div>
   );
