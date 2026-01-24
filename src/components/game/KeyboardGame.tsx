@@ -19,24 +19,27 @@ import styles from './KeyboardGame.module.css';
 interface KeyboardGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
+  songDuration?: number; // Duration in seconds
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
 export default function KeyboardGame({ 
   notes: initialNotes, 
   songStartedAt,
+  songDuration,
   onGameEnd 
 }: KeyboardGameProps) {
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
   const [currentTime, setCurrentTime] = useState(0);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
-  const [, setMaxCombo] = useState(0); // For future use
+  const [maxCombo, setMaxCombo] = useState(0);
   const [lastJudgment, setLastJudgment] = useState<JudgmentType | null>(null);
   const [isLandscape, setIsLandscape] = useState(true);
   
   const gameStartTime = useRef<number | null>(null);
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const gameEndedRef = useRef(false);
 
   // 画面の向きを検出
   useEffect(() => {
@@ -153,6 +156,17 @@ export default function KeyboardGame({
       }
     }
   }, [currentTime, notes, showJudgment]);
+
+  // ゲーム終了判定
+  useEffect(() => {
+    if (!songDuration || gameEndedRef.current) return;
+    
+    const durationMs = songDuration * 1000;
+    if (currentTime >= durationMs) {
+      gameEndedRef.current = true;
+      onGameEnd?.(score, maxCombo);
+    }
+  }, [currentTime, songDuration, score, maxCombo, onGameEnd]);
 
   // 縦向きの場合は回転を促すオーバーレイを表示
   if (!isLandscape) {
