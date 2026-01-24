@@ -10,7 +10,8 @@ import {
   VIBRATION_DURATION,
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
-  JudgmentType
+  JudgmentType,
+  LANE_COUNT
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import styles from './GuitarGame.module.css';
@@ -37,9 +38,9 @@ export default function GuitarGame({
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [lastJudgment, setLastJudgment] = useState<JudgmentType | null>(null);
+  const [judgmentId, setJudgmentId] = useState(0);
   const [activeKeys, setActiveKeys] = useState<Set<number>>(new Set());
   
-  const gameStartTime = useRef<number | null>(null);
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
 
@@ -49,7 +50,7 @@ export default function GuitarGame({
   // Calculate lane positions (evenly distributed) - Vertical layout
   const laneWidth = 50;
   const laneGap = 4;
-  const totalLanes = 6;
+  const totalLanes = LANE_COUNT;
   
   // For vertical layout, get X position for each lane
   const getLaneX = (lane: number) => {
@@ -64,7 +65,6 @@ export default function GuitarGame({
     if (!songStartedAt) return;
 
     const serverStartTime = new Date(songStartedAt).getTime();
-    gameStartTime.current = serverStartTime;
 
     const updateTime = () => {
       const now = Date.now();
@@ -85,6 +85,7 @@ export default function GuitarGame({
       clearTimeout(judgmentTimeoutRef.current);
     }
     setLastJudgment(judgment);
+    setJudgmentId(prev => prev + 1);
     judgmentTimeoutRef.current = setTimeout(() => {
       setLastJudgment(null);
     }, JUDGMENT_DISPLAY_DURATION);
@@ -187,7 +188,7 @@ export default function GuitarGame({
   return (
     <div className={styles.gameContainer}>
       {/* Judgment display (Fixed overlay) */}
-      <JudgmentDisplay judgment={lastJudgment} combo={combo} />
+      <JudgmentDisplay judgment={lastJudgment} combo={combo} judgmentId={judgmentId} />
 
       {/* Background video */}
       <video 
@@ -246,7 +247,7 @@ export default function GuitarGame({
 
         {/* Touch buttons (bottom, horizontal - like guitar frets) */}
         <div className={styles.stringLabels}>
-          {Array.from({ length: 6 }).map((_, index) => (
+          {Array.from({ length: totalLanes }).map((_, index) => (
             <div 
               key={index}
               className={`${styles.stringLabel} ${styles[`lane${index}`]} ${activeKeys.has(index) ? styles.active : ''}`}
@@ -263,6 +264,13 @@ export default function GuitarGame({
                   return next;
                 });
               }}
+              onTouchCancel={() => {
+                setActiveKeys(prev => {
+                  const next = new Set(prev);
+                  next.delete(index);
+                  return next;
+                });
+              }}
             >
               <span className={styles.stringNumber}>{index + 1}</span>
             </div>
@@ -272,4 +280,3 @@ export default function GuitarGame({
     </div>
   );
 }
-

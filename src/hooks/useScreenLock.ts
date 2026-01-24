@@ -3,7 +3,6 @@ import { useEffect, useCallback, useState } from 'react';
 type OrientationType = 'landscape' | 'portrait' | 'any';
 
 // Type for Screen Orientation API with optional lock/unlock methods
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ScreenOrientationWithLock = ScreenOrientation & {
   lock?: (orientation: string) => Promise<void>;
 };
@@ -104,6 +103,10 @@ export function useScreenLock(initialOrientation?: OrientationType): UseScreenLo
  * Request fullscreen mode (required for orientation lock on some browsers)
  */
 export async function requestFullscreen(): Promise<boolean> {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
   try {
     if (document.documentElement.requestFullscreen) {
       await document.documentElement.requestFullscreen();
@@ -119,8 +122,11 @@ export async function requestFullscreen(): Promise<boolean> {
  * Exit fullscreen mode
  */
 export function exitFullscreen(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
   if (document.exitFullscreen && document.fullscreenElement) {
     document.exitFullscreen();
   }
 }
-

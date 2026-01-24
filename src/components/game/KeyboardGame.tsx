@@ -36,9 +36,9 @@ export default function KeyboardGame({
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [lastJudgment, setLastJudgment] = useState<JudgmentType | null>(null);
+  const [judgmentId, setJudgmentId] = useState(0);
   const [isLandscape, setIsLandscape] = useState(true);
   
-  const gameStartTime = useRef<number | null>(null);
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
 
@@ -64,7 +64,6 @@ export default function KeyboardGame({
     if (!songStartedAt) return;
 
     const serverStartTime = new Date(songStartedAt).getTime();
-    gameStartTime.current = serverStartTime;
 
     const updateTime = () => {
       const now = Date.now();
@@ -83,6 +82,7 @@ export default function KeyboardGame({
       clearTimeout(judgmentTimeoutRef.current);
     }
     setLastJudgment(judgment);
+    setJudgmentId(prev => prev + 1);
     judgmentTimeoutRef.current = setTimeout(() => {
       setLastJudgment(null);
     }, JUDGMENT_DISPLAY_DURATION);
@@ -191,7 +191,7 @@ export default function KeyboardGame({
   return (
     <div className={styles.gameContainer}>
       {/* 判定表示（最上位に配置） */}
-      <JudgmentDisplay judgment={lastJudgment} combo={combo} />
+      <JudgmentDisplay judgment={lastJudgment} combo={combo} judgmentId={judgmentId} />
 
       {/* 上部：スコア表示 */}
       <div className={styles.scoreArea}>

@@ -7,9 +7,10 @@ import styles from './JudgmentDisplay.module.css';
 interface JudgmentDisplayProps {
   judgment: JudgmentType | null;
   combo: number;
+  judgmentId: number;
 }
 
-export default function JudgmentDisplay({ judgment, combo }: JudgmentDisplayProps) {
+export default function JudgmentDisplay({ judgment, combo, judgmentId }: JudgmentDisplayProps) {
   const isMiss = judgment === 'miss';
   
   return (
@@ -18,6 +19,7 @@ export default function JudgmentDisplay({ judgment, combo }: JudgmentDisplayProp
       <AnimatePresence>
         {isMiss && (
           <motion.div
+            key={`miss-${judgmentId}`}
             className={styles.missFlash}
             initial={{ opacity: 0.5 }}
             animate={{ opacity: 0 }}
@@ -55,7 +57,7 @@ export default function JudgmentDisplay({ judgment, combo }: JudgmentDisplayProp
         <AnimatePresence mode="popLayout">
           {judgment && (
             <motion.div
-              key={`${judgment}-${combo}`} // Ensure re-render on each hit
+              key={`${judgment}-${judgmentId}`}
               className={styles.judgmentWrapper}
               initial={{ opacity: 0, y: 20, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
