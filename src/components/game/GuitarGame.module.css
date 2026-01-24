@@ -38,22 +38,7 @@
   z-index: 5;
 }
 
-/* Judgment line (horizontal, near bottom) */
-.judgmentLine {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 20%;
-  height: 4px;
-  background: linear-gradient(90deg, 
-    rgba(255, 215, 0, 0) 0%,
-    rgba(255, 215, 0, 1) 20%,
-    rgba(255, 215, 0, 1) 80%,
-    rgba(255, 215, 0, 0) 100%
-  );
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-  z-index: 20;
-}
+/* Judgment line removed */
 
 /* Note track area */
 .noteTrack {
@@ -68,6 +53,8 @@
   top: 0;
   bottom: 0;
   width: 50px;
+  /* Ensure center alignment */
+  transform: translateX(-50%);
   display: flex;
   justify-content: center;
 }
@@ -78,6 +65,7 @@
   top: 0;
   bottom: 0;
   left: 50%;
+  transform: translateX(-50%);
   width: 2px;
   background: linear-gradient(180deg, 
     rgba(255, 255, 255, 0.1) 0%,
@@ -89,8 +77,8 @@
 /* Note styling */
 .note {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  width: 50px; /* Match lane width */
+  height: 50px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -99,6 +87,7 @@
   font-size: 1rem;
   transition: transform 0.05s ease;
   box-shadow: 0 0 15px currentColor;
+  transform: translate(-50%, -50%); /* Center on coordinate */
 }
 
 .note.lane0 { background: radial-gradient(circle, #ff6b6b 0%, #cc5555 100%); color: #fff; }
@@ -120,73 +109,101 @@
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.15); }
 }
 
-/* Judgment display area */
-.judgmentArea {
-  position: absolute;
-  left: 50%;
-  top: 40%;
-  transform: translate(-50%, -50%);
-  z-index: 25;
-}
+/* Judgment display area removed (moved to root) */
 
-/* String labels (bottom, horizontal - like guitar frets) */
+/* String labels container */
 .stringLabels {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  padding: 1rem;
-  background: linear-gradient(0deg, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+  height: 120px; /* Explicit height */
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.95) 0%, transparent 100%);
   z-index: 15;
+  pointer-events: none; /* Allow clicks to pass through if necessary, but buttons pointer-events: auto */
 }
 
+/* Each button/label */
 .stringLabel {
-  width: 50px;
-  height: 60px;
+  position: absolute;
+  bottom: 20px;
+  /* left is set by inline style */
+  transform: translateX(-50%);
+  
+  width: 55px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  font-weight: bold;
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.1s ease;
+  border-radius: 12px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: manipulation;
   user-select: none;
+  overflow: hidden;
+  pointer-events: auto; /* Enable interaction */
 }
 
-.stringLabel.active {
+/* String Number Style */
+.stringNumber {
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  z-index: 2;
+  transition: transform 0.1s;
+}
+
+.stringLabel.active .stringNumber {
+  transform: scale(1.2);
   color: #fff;
-  background: rgba(255, 255, 255, 0.3);
-  border-color: currentColor;
-  transform: scale(1.1);
-  box-shadow: 0 0 20px currentColor;
+  text-shadow: 0 0 10px currentColor;
 }
 
-.stringLabel:nth-child(1) { border-color: #ff6b6b; background: rgba(255, 107, 107, 0.3); }
-.stringLabel:nth-child(2) { border-color: #ffd93d; background: rgba(255, 217, 61, 0.3); }
-.stringLabel:nth-child(3) { border-color: #6bcb77; background: rgba(107, 203, 119, 0.3); }
-.stringLabel:nth-child(4) { border-color: #4d96ff; background: rgba(77, 150, 255, 0.3); }
-.stringLabel:nth-child(5) { border-color: #9b59b6; background: rgba(155, 89, 182, 0.3); }
-.stringLabel:nth-child(6) { border-color: #ff9ff3; background: rgba(255, 159, 243, 0.3); }
-
-/* Button lane classes for dynamic styling */
-.stringLabel.lane0 { border-color: #ff6b6b; background: rgba(255, 107, 107, 0.3); }
-.stringLabel.lane1 { border-color: #ffd93d; background: rgba(255, 217, 61, 0.3); }
-.stringLabel.lane2 { border-color: #6bcb77; background: rgba(107, 203, 119, 0.3); }
-.stringLabel.lane3 { border-color: #4d96ff; background: rgba(77, 150, 255, 0.3); }
-.stringLabel.lane4 { border-color: #9b59b6; background: rgba(155, 89, 182, 0.3); }
-.stringLabel.lane5 { border-color: #ff9ff3; background: rgba(255, 159, 243, 0.3); }
-
-.stringLabel:active {
-  transform: scale(0.95);
+/* Active State & Glow Effects */
+.stringLabel.active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-50%) translateY(2px);
+  box-shadow: 
+    0 0 20px currentColor,
+    inset 0 0 10px rgba(255, 255, 255, 0.5);
+  border-color: currentColor !important;
 }
+
+/* Ripple Effect */
+.stringLabel::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.stringLabel.active::after {
+  transform: translate(-50%, -50%) scale(2);
+  opacity: 0.5;
+  transition: none;
+}
+
+/* Lane-specific colors */
+.stringLabel.lane0 { border-color: rgba(255, 107, 107, 0.5); color: #ff6b6b; }
+.stringLabel.lane1 { border-color: rgba(255, 217, 61, 0.5); color: #ffd93d; }
+.stringLabel.lane2 { border-color: rgba(107, 203, 119, 0.5); color: #6bcb77; }
+.stringLabel.lane3 { border-color: rgba(77, 150, 255, 0.5); color: #4d96ff; }
+.stringLabel.lane4 { border-color: rgba(155, 89, 182, 0.5); color: #9b59b6; }
+.stringLabel.lane5 { border-color: rgba(255, 159, 243, 0.5); color: #ff9ff3; }
+
+/* Remove old nth-child styles to avoid conflict */

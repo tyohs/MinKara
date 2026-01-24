@@ -208,8 +208,7 @@ export default function GuitarGame({
 
       {/* Main game area */}
       <div className={styles.mainArea}>
-        {/* Judgment line (horizontal, near bottom) */}
-        <div className={styles.judgmentLine} />
+        {/* Judgment line removed */}
 
         {/* Note track */}
         <div className={styles.noteTrack}>
@@ -229,12 +228,13 @@ export default function GuitarGame({
             // Only render notes visible on screen
             if (y < -50 || y > screenHeight + 50) return null;
             
+            
             return (
               <div
                 key={note.id}
                 className={`${styles.note} ${styles[`lane${note.lane}`]} ${note.type === 'special' ? styles.special : ''}`}
                 style={{
-                  left: getLaneX(note.lane) + 5,
+                  left: getLaneX(note.lane), // Use exact lane center
                   top: y,
                 }}
               />
@@ -250,6 +250,7 @@ export default function GuitarGame({
             <div 
               key={index}
               className={`${styles.stringLabel} ${styles[`lane${index}`]} ${activeKeys.has(index) ? styles.active : ''}`}
+              style={{ left: getLaneX(index) }} // Position exactly with lane center
               onTouchStart={(e) => {
                 e.preventDefault();
                 setActiveKeys(prev => new Set(prev).add(index));
@@ -262,7 +263,9 @@ export default function GuitarGame({
                   return next;
                 });
               }}
-            />
+            >
+              <span className={styles.stringNumber}>{index + 1}</span>
+            </div>
           ))}
         </div>
       </div>
