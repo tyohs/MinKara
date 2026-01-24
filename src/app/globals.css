@@ -63,19 +63,20 @@ body {
 
 /* ===== LOGO ===== */
 .home-logo {
-  width: 432px;
+  width: 100%;
+  max-width: 432px;
   height: auto;
   filter: drop-shadow(0 6px 20px rgba(255, 126, 95, 0.25));
 }
 
 .home-catchcopy {
-  width: 380px;
+  width: 100%;
+  max-width: 380px;
   height: auto;
-  margin-top: -200px; /* 過激に近づけました */
+  margin-top: -25%; /* Relative positioning for responsiveness */
   filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.1));
 }
 
-/* ===== BUTTONS ===== */
 /* ===== BUTTONS ===== */
 .home-nav {
   width: 100%;
@@ -99,7 +100,8 @@ body {
   
   /* 3D Pop Style */
   position: relative;
-  transition: all 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
   box-shadow: 
     0 -4px 0 rgba(0,0,0,0.1) inset, /* Inner Highlight */
     0 8px 0 #E2E2E2, /* 3D Side (Gray) */

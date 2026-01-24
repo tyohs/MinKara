@@ -19,7 +19,7 @@ export default function HomePage() {
         role="presentation"
         title="Background animation"
       >
-        <source src="/video/背景モノクロ動画生成.mp4" type="video/mp4" />
+        <source src="/video/background-monochrome.mp4" type="video/mp4" />
       </video>
 
       <div className="home-container">
