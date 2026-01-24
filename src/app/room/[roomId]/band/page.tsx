@@ -1,18 +1,24 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { KeyboardGame } from '@/components/game';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { KeyboardGame, GuitarGame } from '@/components/game';
 import { generateDemoChart, getChartForSong } from '@/data/charts';
 import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
 import { submitScore, getUserId } from '@/hooks/useSubmitScore';
 import { getNotesFromPosition } from '@/lib/noteGenerator';
 
+type Instrument = 'keyboard' | 'guitar' | 'drums';
+
 export default function BandPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const roomId = params.roomId as string;
+  
+  // 楽器をクエリパラメータから取得（デフォルト: keyboard）
+  const instrument = (searchParams.get('instrument') as Instrument) || 'keyboard';
   
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
@@ -111,13 +117,26 @@ export default function BandPage() {
     );
   }
 
-  return (
-    <KeyboardGame
-      notes={activeNotes}
-      songStartedAt={session?.song_started_at ?? new Date().toISOString()}
-      songDuration={songDuration}
-      onGameEnd={handleGameEnd}
-    />
-  );
-}
+  // 楽器に応じてゲームコンポーネントを切り替え
+  const gameProps = {
+    notes: activeNotes,
+    songStartedAt: session?.song_started_at ?? new Date().toISOString(),
+    songDuration: songDuration,
+    onGameEnd: handleGameEnd,
+  };
 
+  switch (instrument) {
+    case 'guitar':
+      return <GuitarGame {...gameProps} />;
+    case 'drums':
+      // TODO: DrumGame 実装後に追加
+      return (
+        <div className="flex items-center justify-center h-screen bg-[#0a0a0f] text-white">
+          <div className="text-2xl">🥁 ドラムは準備中...</div>
+        </div>
+      );
+    case 'keyboard':
+    default:
+      return <KeyboardGame {...gameProps} />;
+  }
+}

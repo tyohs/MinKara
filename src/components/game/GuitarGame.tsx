@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import NoteTrack from './NoteTrack';
-import PianoKeys from './PianoKeys';
 import ScoreDisplay from './ScoreDisplay';
 import JudgmentDisplay from './JudgmentDisplay';
 import { NoteData } from './Note';
@@ -12,54 +10,56 @@ import {
   VIBRATION_DURATION,
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
-  JudgmentType 
+  JudgmentType
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
-import styles from './KeyboardGame.module.css';
+import styles from './GuitarGame.module.css';
 
-interface KeyboardGameProps {
+interface GuitarGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
-  songDuration?: number; // Duration in seconds
+  songDuration?: number;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
-export default function KeyboardGame({ 
+// Note travel time from right to judgment line (ms)
+const NOTE_TRAVEL_TIME = 2000;
+
+export default function GuitarGame({ 
   notes: initialNotes, 
   songStartedAt,
   songDuration,
   onGameEnd 
-}: KeyboardGameProps) {
+}: GuitarGameProps) {
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
   const [currentTime, setCurrentTime] = useState(0);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
   const [lastJudgment, setLastJudgment] = useState<JudgmentType | null>(null);
-  const [isLandscape, setIsLandscape] = useState(true);
+  const [activeKeys, setActiveKeys] = useState<Set<number>>(new Set());
   
   const gameStartTime = useRef<number | null>(null);
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
 
-  // 画面を横向きでロック
-  useScreenLock('landscape');
+  // 画面を縦向きでロック（ギターを持つように）
+  useScreenLock('portrait');
 
-  // 画面の向きを検出
-  useEffect(() => {
-    const checkOrientation = () => {
-      setIsLandscape(window.innerWidth > window.innerHeight);
-    };
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
-    return () => {
-      window.removeEventListener('resize', checkOrientation);
-      window.removeEventListener('orientationchange', checkOrientation);
-    };
-  }, []);
+  // Calculate lane positions (evenly distributed) - Vertical layout
+  const laneWidth = 50;
+  const laneGap = 4;
+  const totalLanes = 6;
+  
+  // For vertical layout, get X position for each lane
+  const getLaneX = (lane: number) => {
+    const trackWidth = totalLanes * laneWidth + (totalLanes - 1) * laneGap;
+    const startX = (typeof window !== 'undefined' ? window.innerWidth : 400 - trackWidth) / 2 - trackWidth / 2;
+    return startX + lane * (laneWidth + laneGap);
+  };
 
-  // ゲーム時間の更新
+
+  // Game time update
   useEffect(() => {
     if (!songStartedAt) return;
 
@@ -77,6 +77,8 @@ export default function KeyboardGame({
 
     return () => clearInterval(interval);
   }, [songStartedAt]);
+
+
 
   const showJudgment = useCallback((judgment: JudgmentType) => {
     if (judgmentTimeoutRef.current) {
@@ -138,7 +140,7 @@ export default function KeyboardGame({
     };
   }, []);
 
-  // ミス判定
+  // Miss detection
   useEffect(() => {
     const missedNotes = notes.filter(note => 
       !note.hit && 
@@ -153,7 +155,6 @@ export default function KeyboardGame({
       ));
       
       setCombo(0);
-
       showJudgment('miss');
       
       if (navigator.vibrate) {
@@ -162,7 +163,7 @@ export default function KeyboardGame({
     }
   }, [currentTime, notes, showJudgment]);
 
-  // ゲーム終了判定
+  // Game end detection
   useEffect(() => {
     if (!songDuration || gameEndedRef.current) return;
     
@@ -173,41 +174,99 @@ export default function KeyboardGame({
     }
   }, [currentTime, songDuration, score, maxCombo, onGameEnd]);
 
-  // 縦向きの場合は回転を促すオーバーレイを表示
-  if (!isLandscape) {
-    return (
-      <div className={styles.rotateOverlay}>
-        <div className={styles.rotateIcon}>📱</div>
-        <div className={styles.rotateText}>
-          横向きにしてプレイしてください
-        </div>
-        <div className={styles.rotateHint}>
-          Rotate your device to landscape mode
-        </div>
-      </div>
-    );
-  }
+  // Calculate note position (vertical - top to bottom)
+  const getNoteY = (noteTime: number) => {
+    const timeDiff = noteTime - currentTime;
+    const progress = timeDiff / NOTE_TRAVEL_TIME;
+    const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 600;
+    // Notes fall from top, judgment line is near bottom (80% down)
+    const judgmentLineY = screenHeight * 0.75;
+    return judgmentLineY - progress * judgmentLineY;
+  };
 
   return (
     <div className={styles.gameContainer}>
-      {/* 判定表示（最上位に配置） */}
+      {/* Judgment display (Fixed overlay) */}
       <JudgmentDisplay judgment={lastJudgment} combo={combo} />
 
-      {/* 上部：スコア表示 */}
+      {/* Background video */}
+      <video 
+        className={styles.backgroundVideo}
+        autoPlay 
+        loop 
+        muted 
+        playsInline
+        aria-hidden="true"
+      >
+        <source src="/videos/Musical_Instruments_in_Space_Video.mp4" type="video/mp4" />
+      </video>
+
+      {/* Score area */}
       <div className={styles.scoreArea}>
         <ScoreDisplay score={score} combo={combo} />
       </div>
 
-      {/* メインエリア（ノーツ落下） */}
+      {/* Main game area */}
       <div className={styles.mainArea}>
-        <NoteTrack 
-          notes={notes.filter(n => !n.hit)} 
-          currentTime={currentTime} 
-        />
-      </div>
+        {/* Judgment line (horizontal, near bottom) */}
+        <div className={styles.judgmentLine} />
 
-      {/* 下部：ピアノ鍵盤（横並び） */}
-      <PianoKeys onKeyPress={handleKeyPress} />
+        {/* Note track */}
+        <div className={styles.noteTrack}>
+          {/* Vertical string lanes */}
+          {Array.from({ length: totalLanes }).map((_, lane) => (
+            <div 
+              key={lane}
+              className={styles.stringLane}
+              style={{ left: getLaneX(lane) }}
+            />
+          ))}
+
+          {/* Notes falling from top */}
+          {notes.filter(n => !n.hit).map(note => {
+            const y = getNoteY(note.time);
+            const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 600;
+            // Only render notes visible on screen
+            if (y < -50 || y > screenHeight + 50) return null;
+            
+            return (
+              <div
+                key={note.id}
+                className={`${styles.note} ${styles[`lane${note.lane}`]} ${note.type === 'special' ? styles.special : ''}`}
+                style={{
+                  left: getLaneX(note.lane) + 5,
+                  top: y,
+                }}
+              />
+            );
+          })}
+        </div>
+
+
+
+        {/* Touch buttons (bottom, horizontal - like guitar frets) */}
+        <div className={styles.stringLabels}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div 
+              key={index}
+              className={`${styles.stringLabel} ${styles[`lane${index}`]} ${activeKeys.has(index) ? styles.active : ''}`}
+              onTouchStart={(e) => {
+                e.preventDefault();
+                setActiveKeys(prev => new Set(prev).add(index));
+                handleKeyPress(index);
+              }}
+              onTouchEnd={() => {
+                setActiveKeys(prev => {
+                  const next = new Set(prev);
+                  next.delete(index);
+                  return next;
+                });
+              }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
+
