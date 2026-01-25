@@ -23,8 +23,8 @@ interface GuitarGameProps {
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
-// Note travel time from right to judgment line (ms)
-const NOTE_TRAVEL_TIME = 2000;
+// Note travel time from right to judgment line (ms) - Sped up for better rhythmic feel
+const NOTE_TRAVEL_TIME = 1500;
 
 export default function GuitarGame({ 
   notes: initialNotes, 
@@ -180,8 +180,10 @@ export default function GuitarGame({
     const timeDiff = noteTime - currentTime;
     const progress = timeDiff / NOTE_TRAVEL_TIME;
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 600;
-    // Notes fall from top, judgment line is near bottom (80% down)
-    const judgmentLineY = screenHeight * 0.75;
+    // Buttons are bottom: 20px, height: 80px.
+    // Adjusted judgment line to be slightly higher (near top edge of buttons)
+    // based on user feedback to balance "too early" vs "too late" feel.
+    const judgmentLineY = screenHeight - 110;
     return judgmentLineY - progress * judgmentLineY;
   };
 

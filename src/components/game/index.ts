@@ -1,6 +1,7 @@
 // Re-export all game components
 export { default as KeyboardGame } from './KeyboardGame';
 export { default as GuitarGame } from './GuitarGame';
+export { default as DrumGame } from './DrumGame';
 export { default as PianoKeys } from './PianoKeys';
 export { default as Note } from './Note';
 export { default as NoteTrack } from './NoteTrack';

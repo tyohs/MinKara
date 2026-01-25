@@ -1,0 +1,213 @@
+.gameContainer {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2f 50%, #0a0a0f 100%);
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Background video */
+.backgroundVideo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.noteRailArea {
+  position: relative;
+  z-index: 10;
+  flex: 0 0 140px;
+  padding: 20px 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.noteRail {
+  position: relative;
+  width: 100%;
+  height: 80px;
+  /* Removed border/background for cleaner look */
+}
+
+.noteLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.hitMarker {
+  position: absolute;
+  left: 18%;
+  top: 50%;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  background: transparent;
+}
+
+/* Note styling matching GuitarGame but circular for drums */
+.note {
+  position: absolute;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 15px currentColor;
+  z-index: 5;
+  /* Colors handled via inline styles in TSX, but defining base shape here */
+  border: 3px solid rgba(255,255,255,0.8);
+}
+
+.note.special {
+  width: 45px;
+  height: 45px;
+  border-color: #ffd700;
+  box-shadow: 0 0 25px #ffd700;
+}
+
+.scoreWrapper {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  z-index: 20;
+}
+
+.drumStage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.drumKit {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  height: 100%;
+  max-height: 600px;
+}
+
+/* Drum Pad Styling - Simple, Clean, Geometric */
+.pad {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  border-radius: 50%;
+  border: 3px solid var(--pad-color);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
+  
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.05s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Size overrides */
+  padding: 0;
+}
+
+.pad:active, .pad.active {
+  transform: translate(-50%, -50%) scale(0.95);
+  background: var(--pad-color);
+  border-color: var(--pad-glow);
+  box-shadow: 0 0 30px var(--pad-color-dark);
+}
+
+.pad:active .padLabel, .pad.active .padLabel {
+  color: #000;
+  text-shadow: none;
+}
+
+.padLabel {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Specific Drum Type Styles */
+.pad.cymbal {
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(234, 179, 8, 0.1) 0%, rgba(234, 179, 8, 0.05) 100%);
+}
+
+.pad.drum {
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+}
+
+.pad.kick {
+  border-radius: 12px; /* Kick is square-ish */
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+}
+
+/* Sizes */
+.size-xl { width: 160px; height: 120px; } /* Kick */
+.size-lg { width: 140px; height: 140px; }
+.size-md { width: 110px; height: 110px; }
+
+/* Rotate Overlay */
+.rotateOverlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background: #020617;
+  color: #f8fafc;
+  text-align: center;
+  padding: 24px;
+}
+
+.rotateTitle {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #22d3ee;
+}
+
+.rotateHint {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+@media (max-width: 900px) {
+  .size-xl { width: 100px; height: 80px; }
+  .size-lg { width: 90px; height: 90px; }
+  .size-md { width: 70px; height: 70px; }
+  
+  .noteRailArea { flex: 0 0 100px; }
+  .hitMarker { width: 50px; height: 50px; }
+  .note { width: 30px; height: 30px; }
+}
