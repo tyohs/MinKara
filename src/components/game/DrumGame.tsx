@@ -34,17 +34,17 @@ const DRUM_COLORS = [
 const DRUM_GROUP_COUNT = DRUM_COLORS.length;
 
 const DRUM_PADS = [
-  { label: 'CRASH L', group: 0, x: 25, y: 25, size: 'md' },
-  { label: 'TOM 1', group: 1, x: 40, y: 35, size: 'md' },
-  { label: 'TOM 2', group: 1, x: 60, y: 35, size: 'md' },
-  { label: 'CRASH R', group: 0, x: 75, y: 25, size: 'md' },
+  { label: 'CRASH L', group: 0, x: 25, y: 25, size: 'md', type: 'cymbal' },
+  { label: 'TOM 1', group: 1, x: 40, y: 35, size: 'md', type: 'drum' },
+  { label: 'TOM 2', group: 1, x: 60, y: 35, size: 'md', type: 'drum' },
+  { label: 'CRASH R', group: 0, x: 75, y: 25, size: 'md', type: 'cymbal' },
   
-  { label: 'HI-HAT', group: 0, x: 20, y: 55, size: 'md' },
-  { label: 'SNARE', group: 1, x: 38, y: 65, size: 'lg' },
-  { label: 'FLOOR', group: 1, x: 62, y: 65, size: 'lg' },
-  { label: 'RIDE', group: 0, x: 80, y: 55, size: 'md' },
+  { label: 'HI-HAT', group: 0, x: 20, y: 55, size: 'md', type: 'cymbal' },
+  { label: 'SNARE', group: 1, x: 38, y: 65, size: 'lg', type: 'drum' },
+  { label: 'FLOOR', group: 1, x: 62, y: 65, size: 'lg', type: 'drum' },
+  { label: 'RIDE', group: 0, x: 80, y: 55, size: 'md', type: 'cymbal' },
   
-  { label: 'KICK', group: 2, x: 50, y: 85, size: 'xl' },
+  { label: 'KICK', group: 2, x: 50, y: 85, size: 'xl', type: 'kick' },
 ] as const;
 
 const getNoteGroup = (lane: number) => lane % DRUM_GROUP_COUNT;
