@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { KeyboardGame, GuitarGame } from '@/components/game';
+import { KeyboardGame, GuitarGame, DrumGame } from '@/components/game';
 import { generateDemoChart, getChartForSong } from '@/data/charts';
 import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
@@ -129,12 +129,7 @@ export default function BandPage() {
     case 'guitar':
       return <GuitarGame {...gameProps} />;
     case 'drums':
-      // TODO: DrumGame 実装後に追加
-      return (
-        <div className="flex items-center justify-center h-screen bg-[#0a0a0f] text-white">
-          <div className="text-2xl">🥁 ドラムは準備中...</div>
-        </div>
-      );
+      return <DrumGame {...gameProps} />;
     case 'keyboard':
     default:
       return <KeyboardGame {...gameProps} />;
