@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function HomePage() {
   const router = useRouter();
@@ -27,12 +27,12 @@ export default function HomePage() {
         <Image
           src="/images/logo.png"
           alt="MinKara - みんなでカラオケをプレイしよう"
-          width={800}
-          height={800}
+          width={600}
+          height={600}
           className="home-logo"
           priority
         />
-        
+
         {/* Catchcopy */}
         <Image
           src="/images/catchcopy.png"
@@ -44,9 +44,19 @@ export default function HomePage() {
         />
 
         {/* Buttons */}
-        <nav className="home-nav">
+        <nav
+          className="home-nav"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: "10px",
+            width: "150%",
+            maxWidth: "800px",
+            justifyContent: "center",
+          }}
+        >
           <button
-            onClick={() => router.push('/room/create')}
+            onClick={() => router.push("/room/create")}
             className="home-btn primary"
           >
             <Image
@@ -64,7 +74,7 @@ export default function HomePage() {
           </button>
 
           <button
-            onClick={() => router.push('/room/join')}
+            onClick={() => router.push("/room/join")}
             className="home-btn"
           >
             <Image
@@ -81,8 +91,6 @@ export default function HomePage() {
             <span className="home-btn-arrow">▶</span>
           </button>
         </nav>
-
-
       </div>
     </div>
   );
