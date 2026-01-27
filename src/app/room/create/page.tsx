@@ -51,18 +51,21 @@ export default function CreateRoomPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4 py-8 relative">
-      {/* 背景動画 */}
-      <video
-        className="video-bg fixed inset-0 w-full h-full object-cover pointer-events-none z-0"
-        autoPlay
-        loop
-        muted
-        playsInline
-        aria-hidden="true"
-        role="presentation"
-      >
-        <source src="/video/background-monochrome.mp4" type="video/mp4" />
-      </video>
+      {/* 背景動画コンテナ (ここを変更) */}
+      {/* overflow-hiddenを追加して、拡大した動画が画面外にはみ出すのを防ぎます */}
+      <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <video
+          className="w-full h-full object-cover brightness-[0.6] scale-110"
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-hidden="true"
+          role="presentation"
+        >
+          <source src="/video/background-monochrome.mp4" type="video/mp4" />
+        </video>
+      </div>
 
       <div className="relative z-10 w-full max-w-md">
         <motion.div
