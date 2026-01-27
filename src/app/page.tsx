@@ -70,7 +70,7 @@ export default function HomePage() {
               <div className="flex items-center gap-4 relative z-10">
                 <div className="bg-white/20 rounded-xl p-2 md:p-3 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center shrink-0">
                   <Image
-                    src="/images/icon-mic.png"
+                    src="/images/icon-mic-removebg.png"
                     alt=""
                     width={40}
                     height={40}
@@ -99,7 +99,7 @@ export default function HomePage() {
               <div className="flex items-center gap-4 relative z-10">
                 <div className="bg-black/5 rounded-xl p-2 md:p-3 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center shrink-0">
                   <Image
-                    src="/images/icon-hand.png"
+                    src="/images/icon-hand-removebg.png"
                     alt=""
                     width={40}
                     height={40}
