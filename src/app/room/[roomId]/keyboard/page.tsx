@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { KeyboardGame, GuitarGame, DrumGame } from '@/components/game';
+import { useParams, useRouter } from 'next/navigation';
+import KeyboardGame from '@/components/game/KeyboardGame';
 import { generateDemoChart, getChartForSong } from '@/data/charts';
 import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
@@ -10,16 +10,10 @@ import { useSyncedAudio } from '@/hooks/useSyncedAudio';
 import { submitScore, getUserId } from '@/hooks/useSubmitScore';
 import { getNotesFromPosition } from '@/lib/noteGenerator';
 
-type Instrument = 'keyboard' | 'guitar' | 'drums';
-
-export default function BandPage() {
+export default function KeyboardPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const roomId = params.roomId as string;
-  
-  // 楽器をクエリパラメータから取得（デフォルト: keyboard）
-  const instrument = (searchParams.get('instrument') as Instrument) || 'keyboard';
   
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
@@ -124,30 +118,16 @@ export default function BandPage() {
     );
   }
 
-  // 楽器に応じてゲームコンポーネントを切り替え
-  const gameProps = {
-    notes: activeNotes,
-    songStartedAt: session?.song_started_at ?? new Date().toISOString(),
-    songDuration: songDuration,
-    onGameEnd: handleGameEnd,
-  };
-
-  const renderGame = () => {
-    switch (instrument) {
-      case 'guitar':
-        return <GuitarGame {...gameProps} />;
-      case 'drums':
-        return <DrumGame {...gameProps} />;
-      case 'keyboard':
-      default:
-        return <KeyboardGame {...gameProps} />;
-    }
-  };
-
   return (
     <>
       {song && <audio ref={audioRef} src={song.audio_url} preload="auto" />}
-      {renderGame()}
+      <KeyboardGame
+        notes={activeNotes}
+        songStartedAt={session?.song_started_at ?? new Date().toISOString()}
+        songDuration={songDuration}
+        bpm={song?.bpm ?? 120}
+        onGameEnd={handleGameEnd}
+      />
     </>
   );
 }

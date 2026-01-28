@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import Note, { NoteData } from './Note';
 import { KEY_COLORS, LANE_COUNT, NOTE_CONFIG } from '@/lib/gameConfig';
 import styles from './NoteTrack.module.css';
@@ -8,35 +8,25 @@ import styles from './NoteTrack.module.css';
 interface NoteTrackProps {
   notes: NoteData[];
   currentTime: number;
-  noteSpeed?: number;
+  bpm?: number;
 }
 
 export default function NoteTrack({ 
   notes, 
   currentTime, 
-  noteSpeed = NOTE_CONFIG.defaultSpeed 
+  bpm = 120 
 }: NoteTrackProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [trackHeight, setTrackHeight] = useState(400);
-
-  useEffect(() => {
-    const updateHeight = () => {
-      if (trackRef.current) {
-        setTrackHeight(trackRef.current.clientHeight);
-      }
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
-
+  const visibleDuration = useMemo(() => {
+    const msPerBeat = 60000 / bpm;
+    return msPerBeat * NOTE_CONFIG.BEATS_VISIBLE_ON_SCREEN;
+  }, [bpm]);
   const visibleNotes = notes.filter(note => {
     const timeUntilHit = note.time - currentTime;
     return timeUntilHit > NOTE_CONFIG.visibleRangePast && timeUntilHit < NOTE_CONFIG.visibleRangeFuture;
   });
 
   return (
-    <div className={styles.trackWrapper} ref={trackRef}>
+    <div className={styles.trackWrapper}>
       {/* 3Dパースペクティブトラック */}
       <div className={styles.perspectiveTrack}>
         {/* レーン */}
@@ -67,8 +57,7 @@ export default function NoteTrack({
             key={note.id}
             note={note}
             currentTime={currentTime}
-            noteSpeed={noteSpeed}
-            trackHeight={trackHeight}
+            visibleDuration={visibleDuration}
           />
         ))}
       </div>

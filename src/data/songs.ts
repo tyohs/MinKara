@@ -6,11 +6,11 @@ import type { Song } from '@/types';
 export const SONGS: Song[] = [
   {
     id: 'song-001',
-    title: 'Shining Star',
-    artist: 'Sample Artist',
-    bpm: 128,
+    title: 'シャイニングスター',
+    artist: '魔王魂',
+    bpm: 158,
     genre: 'Pop',
-    duration: 210,
+    duration: 243,
     audio_url: '/audio/shining_star.mp3',
   },
   {
