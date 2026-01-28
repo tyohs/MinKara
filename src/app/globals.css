@@ -3,13 +3,13 @@
 /* ===== MINKARA HOME ===== */
 
 :root {
-  --coral: #FF7E5F;
-  --coral-pink: #FF6B8A;
-  --orange: #FFA751;
-  --white: #FFFFFF;
-  --cream: #FFFBF5;
-  --gray-600: #4B5563;
-  --gray-900: #1A1A1A;
+  --coral: #ff7e5f;
+  --coral-pink: #ff6b8a;
+  --orange: #ffa751;
+  --white: #ffffff;
+  --cream: #fffbf5;
+  --gray-600: #4b5563;
+  --gray-900: #1a1a1a;
   --font-main: var(--font-outfit), var(--font-noto), system-ui, sans-serif;
 }
 
@@ -19,7 +19,11 @@
   --font-sans: var(--font-main);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 body {
   font-family: var(--font-main);
@@ -34,7 +38,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: var(--cream) url('/images/bg-party.png') center/cover no-repeat;
+  background: var(--cream) url("/images/bg-party.png") center/cover no-repeat;
   position: relative;
   overflow: hidden;
 }
@@ -97,60 +101,60 @@ body {
   border-radius: 28px;
   font-family: var(--font-main);
   cursor: pointer;
-  
+
   /* 3D Pop Style */
   position: relative;
-  transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1),
-              box-shadow 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 
-    0 -4px 0 rgba(0,0,0,0.1) inset, /* Inner Highlight */
-    0 8px 0 #E2E2E2, /* 3D Side (Gray) */
-    0 12px 20px rgba(0, 0, 0, 0.15); /* Drop Shadow */
+  transition:
+    transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.1s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow:
+    0 -4px 0 rgba(0, 0, 0, 0.1) inset,
+    /* Inner Highlight */ 0 8px 0 #e2e2e2,
+    /* 3D Side (Gray) */ 0 12px 20px rgba(0, 0, 0, 0.15); /* Drop Shadow */
 }
 
 /* Hover State - Lift slightly */
 .home-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 
-    0 -4px 0 rgba(0,0,0,0.1) inset,
-    0 10px 0 #E2E2E2, 
+  box-shadow:
+    0 -4px 0 rgba(0, 0, 0, 0.1) inset,
+    0 10px 0 #e2e2e2,
     0 16px 25px rgba(0, 0, 0, 0.2);
 }
 
 /* Active State - Press down */
 .home-btn:active {
   transform: translateY(8px);
-  box-shadow: 
-    0 -2px 0 rgba(0,0,0,0.1) inset,
-    0 0 0 #E2E2E2, /* No side visible */
-    0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 -2px 0 rgba(0, 0, 0, 0.1) inset,
+    0 0 0 #e2e2e2,
+    /* No side visible */ 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Primary Button (Create Room) */
 .home-btn.primary {
-  background: linear-gradient(to bottom, #FF8E9E, #FF6B8A);
-  
+  background: linear-gradient(to bottom, #ff8e9e, #ff6b8a);
+
   /* 3D Side for Primary */
-  box-shadow: 
-    0 -4px 0 rgba(0,0,0,0.2) inset,
-    0 8px 0 #D14763, 
+  box-shadow:
+    0 -4px 0 rgba(0, 0, 0, 0.2) inset,
+    0 8px 0 #d14763,
     0 12px 20px rgba(255, 107, 138, 0.4);
 }
 
 .home-btn.primary:hover {
-  box-shadow: 
-    0 -4px 0 rgba(0,0,0,0.2) inset,
-    0 10px 0 #D14763,
+  box-shadow:
+    0 -4px 0 rgba(0, 0, 0, 0.2) inset,
+    0 10px 0 #d14763,
     0 16px 25px rgba(255, 107, 138, 0.5);
 }
 
 .home-btn.primary:active {
-  box-shadow: 
-    0 -2px 0 rgba(0,0,0,0.2) inset,
-    0 0 0 #D14763,
+  box-shadow:
+    0 -2px 0 rgba(0, 0, 0, 0.2) inset,
+    0 0 0 #d14763,
     0 2px 4px rgba(255, 107, 138, 0.3);
 }
-
 
 .home-btn-icon {
   width: 48px;
@@ -159,7 +163,7 @@ body {
   object-fit: contain;
   background: rgba(255, 255, 255, 0.2); /* Subtle backing */
   padding: 6px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .home-btn.primary .home-btn-icon {
@@ -189,19 +193,19 @@ body {
 
 .home-btn.primary .home-btn-title {
   color: var(--white);
-  text-shadow: 0 2px 0 rgba(0,0,0,0.1);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .home-btn.primary .home-btn-desc {
   color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 1px 0 rgba(0,0,0,0.1);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
 }
 
 .home-btn-arrow {
   font-size: 1.5rem;
   color: var(--coral-pink);
   font-weight: 900;
-  text-shadow: 0 2px 0 rgba(0,0,0,0.1);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .home-btn.primary .home-btn-arrow {
@@ -212,3 +216,22 @@ body {
 
 /* ===== NO DECORATIVE ICONS FOR NOW ===== */
 /* Decorative icons removed temporarily to fix layout */
+
+/* Custom Scrollbar for Denmoku */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
