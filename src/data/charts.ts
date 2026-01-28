@@ -22,12 +22,13 @@ export function getChartForSong(songId: string): Chart | null {
   const song = SONGS.find(s => s.id === songId);
   if (!song) return null;
 
+  // Specific handling for Shining Star (song-001) or generic generation
   const notes = generateNotesFromBPM({
     songId: song.id,
     bpm: song.bpm,
     duration: song.duration,
     difficulty: 'normal',
-    specialNoteChance: 0.1,
+    specialNoteChance: songId === 'song-001' ? 0.15 : 0.1, // Slightly more specials for Shining Star
   });
 
   const chart: Chart = {

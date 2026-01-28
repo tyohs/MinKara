@@ -130,13 +130,45 @@ export async function startPlaying(sessionId: string): Promise<void> {
     .eq('id', sessionId);
 }
 
-// Mark session as finished
+// Mark session as finished and cleanup reservation
 export async function finishSession(sessionId: string): Promise<void> {
-  await supabase
-    .from('game_sessions')
-    .update({
-      ended_at: new Date().toISOString(),
-      status: 'finished',
-    })
-    .eq('id', sessionId);
+  try {
+    // First get the reservation_id
+    const { data: session, error: fetchError } = await supabase
+      .from('game_sessions')
+      .select('reservation_id')
+      .eq('id', sessionId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching session for finish:', fetchError);
+    }
+
+    // Mark session as finished
+    const { error: updateError } = await supabase
+      .from('game_sessions')
+      .update({
+        ended_at: new Date().toISOString(),
+        status: 'finished',
+      })
+      .eq('id', sessionId);
+
+    if (updateError) {
+      console.error('Error updating session status:', updateError);
+    }
+
+    // Delete the reservation to advance the queue
+    if (session?.reservation_id) {
+      const { error: deleteError } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('id', session.reservation_id);
+
+      if (deleteError) {
+        console.error('Error deleting reservation:', deleteError);
+      }
+    }
+  } catch (error) {
+    console.error('Unexpected error in finishSession:', error);
+  }
 }

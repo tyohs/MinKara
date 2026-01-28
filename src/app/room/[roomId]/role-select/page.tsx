@@ -31,9 +31,10 @@ export default function RoleSelectPage() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedInstrument, setSelectedInstrument] = useState<Instrument | null>(null);
   const [hasStartedRoleSelect, setHasStartedRoleSelect] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   // Game session with realtime sync
-  const { session } = useGameSession(roomId);
+  const { session, refetch } = useGameSession(roomId);
   
   // Synced countdown based on role_select_started_at
   const { remaining: countdown, isComplete } = useSyncedCountdown(
@@ -54,16 +55,52 @@ export default function RoleSelectPage() {
   useEffect(() => {
     if (session && session.status === 'countdown' && !hasStartedRoleSelect) {
       setHasStartedRoleSelect(true);
-      startRoleSelect(session.id);
+      startRoleSelect(session.id).then(() => {
+        refetch();
+      });
     }
-  }, [session, hasStartedRoleSelect]);
+  }, [session, hasStartedRoleSelect, refetch]);
 
   // Navigate to game when countdown completes
+  // ONLY navigate when the timer actually hits 0, ensuring everyone starts together
   useEffect(() => {
-    if (isComplete && session) {
-      handleStart();
+    if (isComplete && session && myUserId) {
+      const performTransition = async () => {
+        // Anyone can trigger the start, but let's restrict to Singer or just run it idempotently.
+        // If status is still 'role_select', update it to 'playing'
+        if (session.status === 'role_select') {
+           // We only need one person to fire this. 
+           // Singer is a good candidate, or just check role.
+           if (isSinger) {
+             await startPlaying(session.id);
+           }
+        }
+
+        // Determine destination based on selected roles
+        // If user didn't select, default to spectator? Or force handling?
+        // Current logic assumes they selected something or are the singer.
+        
+        if (isSinger) {
+          router.push(`/room/${roomId}/singer`);
+        } else if (selectedRole === 'ojama') {
+          router.push(`/room/${roomId}/ojama`);
+        } else if (selectedRole === 'band') {
+           const instrument = selectedInstrument || 'keyboard'; // Fallback
+           if (instrument === 'keyboard') {
+             router.push(`/room/${roomId}/keyboard`);
+           } else {
+             router.push(`/room/${roomId}/band?instrument=${instrument}`);
+           }
+        } else {
+          // If no role selected by timeout, default to spectator or ojama?
+          // Let's send them to ojama for now to participate
+           router.push(`/room/${roomId}/ojama`);
+        }
+      };
+      
+      performTransition();
     }
-  }, [isComplete, session]);
+  }, [isComplete, session, isSinger, selectedRole, selectedInstrument, roomId, router, myUserId]);
 
   const handleStart = async () => {
     if (!myUserId || !session) return;
@@ -80,20 +117,11 @@ export default function RoleSelectPage() {
       })
       .eq('room_id', roomId)
       .eq('user_id', myUserId);
-
-    // Start playing phase (first person to finish triggers this)
-    if (session.status === 'role_select') {
-      await startPlaying(session.id);
-    }
-
-    // Navigate to appropriate screen
-    if (isSinger) {
-      router.push(`/room/${roomId}/singer`);
-    } else if (selectedRole === 'ojama') {
-      router.push(`/room/${roomId}/ojama`);
-    } else {
-      router.push(`/room/${roomId}/band`);
-    }
+    
+    // Mark as locally ready to update UI
+    setIsReady(true);
+    
+    // Do NOT navigate here. Wait for isComplete useEffect.
   };
 
   const displayCountdown = Math.ceil(countdown);
@@ -262,13 +290,13 @@ export default function RoleSelectPage() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={!isReady ? { scale: 1.02 } : {}}
+              whileTap={!isReady ? { scale: 0.98 } : {}}
               onClick={handleStart}
-              disabled={!selectedRole || (selectedRole === 'band' && !selectedInstrument)}
+              disabled={isReady || !selectedRole || (selectedRole === 'band' && !selectedInstrument)}
               className="btn-primary w-full mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              準備完了！
+              {isReady ? '他のメンバーを待機中...' : '準備完了！'}
             </motion.button>
           </div>
         ) : (

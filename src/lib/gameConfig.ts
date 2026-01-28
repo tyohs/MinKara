@@ -63,8 +63,6 @@ export const JUDGMENT_CONFIG: Record<JudgmentType, { text: string; color: string
 // ノーツ表示設定
 // ========================================
 export const NOTE_CONFIG = {
-  /** デフォルトの落下速度 (px/ms) */
-  defaultSpeed: 0.4,
   /** ノーツの可視範囲 (ms) - 過去 */
   visibleRangePast: -300,
   /** ノーツの可視範囲 (ms) - 未来 */
@@ -75,6 +73,8 @@ export const NOTE_CONFIG = {
   maxScale: 1.0,
   /** ノーツ幅（レーン幅に対する割合） */
   widthRatio: 0.75,
+  /** 画面内に表示する拍数（論理的なスクロール速度の基準） */
+  beatsVisible: 4,
 } as const;
 
 // ========================================
