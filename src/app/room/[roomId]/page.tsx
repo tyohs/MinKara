@@ -12,10 +12,9 @@ import {
   Plus,
   Trash2,
   Dices,
-  Search,
   X,
-  Timer,
   Mic,
+  ArrowUp,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -35,6 +34,7 @@ export default function DenmokuPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.roomId as string;
+
   const {
     myUserId,
     setMyUserId,
@@ -52,7 +52,7 @@ export default function DenmokuPage() {
   // Game session hook
   const { session } = useGameSession(roomId);
 
-  // Synced countdown (only active when session is in countdown)
+  // Synced countdown
   const countdownRemaining = useDisplayCountdown(
     session?.status === "countdown" ? session.countdown_started_at : null,
     COUNTDOWN_DURATION,
@@ -88,17 +88,14 @@ export default function DenmokuPage() {
     }
   }, [myUserId, setMyUserId]);
 
-  // Navigate to role select when countdown finishes
   useEffect(() => {
     if (session?.status === "countdown" && countdownRemaining <= 0) {
       router.push(`/room/${roomId}/role-select`);
     }
   }, [session?.status, countdownRemaining, router, roomId]);
 
-  // Auto-start game session when first reservation appears (for any user)
   useEffect(() => {
     const checkAndStartSession = async () => {
-      // Only start if we have reservations and no active session
       if (reservations.length > 0 && !session) {
         const firstReservation = reservations[0];
         await createGameSession(
@@ -109,11 +106,9 @@ export default function DenmokuPage() {
         );
       }
     };
-
     checkAndStartSession();
   }, [reservations, session, roomId]);
 
-  // Subscribe to realtime changes
   useEffect(() => {
     const channel = supabase
       .channel(`room:${roomId}`)
@@ -177,7 +172,6 @@ export default function DenmokuPage() {
     });
 
     if (!error) {
-      // Realtime will trigger loadReservations, but also reload immediately for the user who added
       await loadReservations();
     }
 
@@ -187,14 +181,12 @@ export default function DenmokuPage() {
 
   const handleDeleteReservation = async (reservation: Reservation) => {
     if (reservation.user_id !== myUserId) return;
-
     await supabase.from("reservations").delete().eq("id", reservation.id);
     await loadReservations();
   };
 
   const handleReorder = async (newOrder: Reservation[]) => {
     setReservations(newOrder);
-
     for (let i = 0; i < newOrder.length; i++) {
       await supabase
         .from("reservations")
@@ -208,14 +200,13 @@ export default function DenmokuPage() {
     return p?.name || "Unknown";
   };
 
-  // If there's an active countdown, show the announcement overlay
   const showCountdownOverlay =
     session?.status === "countdown" && countdownRemaining > 0;
   const countdownSong = session ? getSongById(session.song_id) : null;
 
   return (
     <main className="min-h-screen flex flex-col relative bg-black text-white overflow-hidden">
-      {/* Background Video (Darkened & Scaled) */}
+      {/* Background Video */}
       <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
         <video
           className="w-full h-full object-cover brightness-[0.4] scale-110"
@@ -231,85 +222,77 @@ export default function DenmokuPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 mx-4 mt-4 px-6 py-4 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-pink-500 to-orange-400 p-2 rounded-lg">
-              <Music className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-white tracking-wide">
-              DENMOKU
-            </h1>
+      <header className="relative z-10 mx-2 mt-2 px-4 py-3 md:mx-4 md:mt-4 md:px-6 md:py-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="bg-gradient-to-br from-pink-500 to-orange-400 p-1.5 rounded-lg">
+            <Music className="w-4 h-4 md:w-5 md:h-5 text-white" />
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-white/5 rounded-xl border border-white/10">
-              <span className="text-gray-400 text-xs sm:text-sm">Room ID:</span>
-              <span className="font-mono font-bold text-white tracking-wider text-xs sm:text-sm">
-                {roomId}
-              </span>
-              <button
-                onClick={handleCopy}
-                className="ml-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-green-400" />
-                ) : (
-                  <Copy className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-            </div>
-
-            <button
-              onClick={handleLeave}
-              className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">退出</span>
-            </button>
-          </div>
+          <h1 className="text-lg md:text-xl font-bold text-white tracking-wide hidden sm:block">
+            DENMOKU
+          </h1>
         </div>
+
+        {/* Room ID Display (Mobile Friendly & Copyable) */}
+        <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
+          <span className="text-gray-400 text-xs md:text-sm">ID:</span>
+          <span className="font-mono font-bold text-white text-sm md:text-base tracking-wider">
+            {roomId}
+          </span>
+          <button
+            onClick={handleCopy}
+            className="ml-1 p-1 hover:bg-white/10 rounded active:scale-95 transition-transform"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-green-400" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-gray-400" />
+            )}
+          </button>
+        </div>
+
+        <button
+          onClick={handleLeave}
+          className="p-2 md:px-4 md:py-2 text-sm font-medium text-white/80 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all flex items-center gap-2"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="hidden sm:inline">退出</span>
+        </button>
       </header>
 
       {/* Main Content */}
-      <div className="relative z-10 flex-1 p-4 md:p-6 overflow-y-auto">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
-          {/* Left Column: Participants (Mobile: Top, Desktop: Left Side) */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl">
-              <div className="flex items-center gap-2 mb-4 px-1">
-                <Users className="w-5 h-5 text-pink-400" />
-                <h2 className="text-lg font-bold text-white">Member</h2>
-                <span className="ml-auto bg-white/10 px-2 py-1 rounded-md text-xs text-white/70 font-mono">
+      <div className="relative z-10 flex-1 p-3 md:p-6 overflow-y-auto">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 pb-20">
+          {/* Participants */}
+          <div className="lg:col-span-4">
+            <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-xl">
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <Users className="w-4 h-4 text-pink-400" />
+                <h2 className="text-base font-bold text-white">Member</h2>
+                <span className="ml-auto bg-white/10 px-2 py-0.5 rounded text-[10px] text-white/70 font-mono">
                   {participants.length}
                 </span>
               </div>
-
-              <div className="space-y-2 max-h-[200px] lg:max-h-[calc(100vh-300px)] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[calc(100vh-300px)] custom-scrollbar pb-2 lg:pb-0">
                 <AnimatePresence mode="popLayout">
                   {participants.map((participant) => (
                     <motion.div
                       key={participant.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 10 }}
-                      className="flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-colors"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-white/5 rounded-full lg:rounded-xl border border-white/5"
                     >
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">
                         {participant.name.charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-medium truncate">
-                            {participant.name}
-                          </span>
-                          {participant.user_id === myUserId && (
-                            <span className="px-2 py-0.5 rounded text-[10px] bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                              YOU
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <span className="text-white text-sm font-medium truncate max-w-[100px] lg:max-w-none">
+                        {participant.name}
+                      </span>
+                      {participant.user_id === myUserId && (
+                        <span className="ml-auto text-[10px] text-pink-300 bg-pink-500/20 px-1.5 py-0.5 rounded border border-pink-500/30">
+                          YOU
+                        </span>
+                      )}
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -317,31 +300,33 @@ export default function DenmokuPage() {
             </div>
           </div>
 
-          {/* Right Column: Playlist */}
+          {/* Playlist */}
           <div className="lg:col-span-8">
-            <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl h-full flex flex-col">
-              <div className="flex items-center justify-between mb-6 px-1">
+            <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-xl min-h-[500px] flex flex-col">
+              {/* Playlist Header & Buttons */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 px-1">
                 <div className="flex items-center gap-2">
                   <Music className="w-5 h-5 text-orange-400" />
                   <h2 className="text-lg font-bold text-white">Playlist</h2>
                 </div>
-                <div className="flex gap-2">
+
+                {/* 改善ポイント: ボタンをここに配置 & 文字ラベル付き */}
+                <div className="flex gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => setShowRoulette(true)}
                     disabled={showCountdownOverlay}
-                    className="p-3 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/10 transition-all active:scale-95 disabled:opacity-50"
-                    title="ルーレット"
+                    className="flex-1 sm:flex-initial px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 border border-white/10 transition-all active:scale-95 disabled:opacity-50"
                   >
-                    <Dices className="w-5 h-5" />
+                    <Dices className="w-4 h-4 text-orange-400" />
+                    <span>ルーレット</span>
                   </button>
                   <button
                     onClick={() => setShowSongPicker(true)}
                     disabled={showCountdownOverlay}
-                    className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-400 hover:to-orange-300 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50"
+                    className="flex-[2] sm:flex-initial px-6 py-2.5 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-400 hover:to-orange-400 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50"
                   >
-                    <Plus className="w-5 h-5" />
-                    <span className="hidden sm:inline">曲を追加</span>
-                    <span className="sm:hidden">追加</span>
+                    <Plus className="w-4 h-4" />
+                    <span>曲を予約</span>
                   </button>
                 </div>
               </div>
@@ -363,62 +348,80 @@ export default function DenmokuPage() {
                         <Reorder.Item
                           key={reservation.id}
                           value={reservation}
-                          className={`group flex items-center gap-4 p-4 rounded-2xl border backdrop-blur-sm cursor-grab active:cursor-grabbing transition-all ${
+                          className={`group relative overflow-hidden flex items-center gap-3 p-3 rounded-xl border backdrop-blur-sm cursor-grab active:cursor-grabbing transition-all ${
                             isFirst
-                              ? "bg-gradient-to-r from-pink-500/10 to-orange-500/10 border-pink-500/30 shadow-[0_0_15px_rgba(255,100,150,0.1)]"
+                              ? "bg-gradient-to-r from-pink-500/20 to-orange-500/20 border-pink-500/30"
                               : "bg-white/5 hover:bg-white/10 border-white/5"
                           }`}
                         >
-                          <span
-                            className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white font-bold text-sm ${
-                              isFirst
-                                ? "bg-gradient-to-br from-pink-500 to-orange-400 shadow-lg"
-                                : "bg-white/10 text-white/50"
-                            }`}
-                          >
+                          {/* Playing Indicator */}
+                          <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-black/20">
                             {isFirst ? (
-                              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                              <div className="flex gap-0.5 items-end h-4">
+                                <motion.div
+                                  animate={{ height: [4, 16, 8, 12, 4] }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 0.5,
+                                  }}
+                                  className="w-1 bg-pink-400 rounded-full"
+                                />
+                                <motion.div
+                                  animate={{ height: [8, 4, 16, 8, 8] }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 0.6,
+                                  }}
+                                  className="w-1 bg-orange-400 rounded-full"
+                                />
+                                <motion.div
+                                  animate={{ height: [12, 8, 4, 16, 12] }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 0.7,
+                                  }}
+                                  className="w-1 bg-pink-400 rounded-full"
+                                />
+                              </div>
                             ) : (
-                              index + 1
+                              <span className="text-white/40 font-bold text-sm">
+                                {index + 1}
+                              </span>
                             )}
-                          </span>
+                          </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-white font-bold truncate text-lg">
-                                {song?.title || "Unknown Song"}
-                              </p>
-                              {isFirst && (
-                                <span className="px-2 py-0.5 rounded text-[10px] bg-pink-500 text-white font-bold animate-pulse">
-                                  NOW PLAYING
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <span className="truncate max-w-[120px]">
+                          <div className="flex-1 min-w-0 z-10">
+                            <p className="text-white font-bold truncate text-base">
+                              {song?.title}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                              <span className="truncate max-w-[100px]">
                                 {song?.artist}
                               </span>
-                              <span className="w-1 h-1 bg-gray-600 rounded-full" />
-                              <div className="flex items-center gap-1 text-gray-300">
-                                <Mic className="w-3 h-3" />
-                                <span className="truncate">
+                              <span className="w-0.5 h-3 bg-gray-600" />
+                              <div className="flex items-center gap-1">
+                                <Mic className="w-3 h-3 text-gray-500" />
+                                <span className="text-gray-300 truncate">
                                   {getParticipantName(reservation.user_id)}
                                 </span>
                               </div>
-                              {reservation.is_roulette && (
-                                <span className="text-xs text-orange-400 border border-orange-400/30 px-1.5 rounded">
-                                  Roulette
-                                </span>
-                              )}
                             </div>
                           </div>
+
+                          {reservation.is_roulette && (
+                            <div className="absolute top-0 right-0 p-1">
+                              <span className="text-[9px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded-bl-lg border-l border-b border-orange-500/20">
+                                Roulette
+                              </span>
+                            </div>
+                          )}
 
                           {isMyReservation && (
                             <button
                               onClick={() =>
                                 handleDeleteReservation(reservation)
                               }
-                              className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                              className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors z-10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -429,14 +432,17 @@ export default function DenmokuPage() {
                   </Reorder.Group>
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-12 opacity-50">
-                  <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4">
+                <div className="flex-1 flex flex-col items-center justify-center py-12 text-center opacity-60">
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 animate-pulse">
                     <Music className="w-8 h-8 text-white/30" />
                   </div>
-                  <p className="text-white/50 text-lg">No songs queued</p>
-                  <p className="text-white/30 text-sm mt-1">
-                    右上のボタンから曲を追加してください
+                  <p className="text-white font-medium mb-1">
+                    プレイリストが空です
                   </p>
+                  <p className="text-sm text-gray-400 mb-6">
+                    上のボタンから曲を追加しよう！
+                  </p>
+                  <ArrowUp className="w-6 h-6 text-pink-400 animate-bounce" />
                 </div>
               )}
             </div>
@@ -467,7 +473,7 @@ export default function DenmokuPage() {
         )}
       </AnimatePresence>
 
-      {/* Countdown Overlay - synchronized */}
+      {/* Countdown Overlay */}
       <AnimatePresence>
         {showCountdownOverlay && countdownSong && (
           <CountdownOverlay
@@ -481,7 +487,8 @@ export default function DenmokuPage() {
   );
 }
 
-// Countdown Overlay Component
+// Sub Components (Optimized for UX)
+
 function CountdownOverlay({
   song,
   singerName,
@@ -496,52 +503,37 @@ function CountdownOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl p-6"
     >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        className="w-full max-w-md bg-black/60 border border-white/10 rounded-3xl p-10 text-center shadow-[0_0_50px_rgba(255,107,107,0.2)] relative overflow-hidden"
-      >
-        {/* Glow effect */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent opacity-50" />
-
+      <div className="text-center w-full max-w-md">
         <motion.div
-          animate={{ scale: [1, 1.1, 1] }}
+          animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 1, repeat: Infinity }}
-          className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center shadow-lg shadow-pink-500/30"
+          className="inline-block p-6 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 mb-8 shadow-[0_0_40px_rgba(255,100,100,0.4)]"
         >
           <Music className="w-12 h-12 text-white" />
         </motion.div>
-
-        <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">
+        <h2 className="text-4xl font-black text-white mb-2 italic tracking-tighter">
           ARE YOU READY?
         </h2>
-
-        <div className="my-6 space-y-2">
-          <p className="text-xl text-white font-medium">{song.title}</p>
-          <p className="text-white/60">{song.artist}</p>
+        <div className="bg-white/10 rounded-2xl p-6 my-8 border border-white/5">
+          <p className="text-2xl font-bold text-white mb-1">{song.title}</p>
+          <p className="text-gray-400 mb-4">{song.artist}</p>
+          <div className="inline-block px-4 py-1 rounded-full bg-black/30 border border-white/10 text-sm">
+            Vocal: <span className="text-pink-400 font-bold">{singerName}</span>
+          </div>
         </div>
-
-        <div className="bg-white/5 rounded-xl p-4 mb-8 border border-white/5">
-          <p className="text-sm text-white/50 mb-1">Singer</p>
-          <p className="text-xl text-pink-400 font-bold">{singerName}</p>
-        </div>
-
-        <div className="flex items-center justify-center gap-3 text-white/80">
-          <Timer className="w-5 h-5 text-orange-400" />
-          <span className="text-4xl font-mono font-bold text-white tabular-nums">
+        <div className="flex justify-center items-end gap-2 text-white/50">
+          <span className="text-6xl font-mono font-bold text-white tabular-nums">
             {countdown}
           </span>
-          <span className="text-sm">SECONDS</span>
+          <span className="mb-2">秒後に開始</span>
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
 
-// Song Picker Modal
 function SongPickerModal({
   onSelect,
   onClose,
@@ -551,7 +543,6 @@ function SongPickerModal({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState("All");
-
   const filteredSongs = filterSongs(searchQuery, selectedGenre);
 
   return (
@@ -559,46 +550,46 @@ function SongPickerModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl max-h-[85vh] bg-[#121212] border border-white/10 rounded-3xl flex flex-col shadow-2xl overflow-hidden"
+        className="w-full sm:max-w-2xl h-[90vh] sm:h-[80vh] bg-[#1a1a1a] sm:rounded-3xl rounded-t-3xl border-t sm:border border-white/10 flex flex-col shadow-2xl overflow-hidden"
       >
-        <div className="flex items-center justify-between p-6 border-b border-white/5">
-          <h2 className="text-2xl font-bold text-white">Select Song</h2>
+        <div className="p-4 border-b border-white/5 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white pl-2">曲を選択</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70 hover:text-white"
+            className="p-2 bg-white/5 rounded-full text-gray-400 hover:text-white"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
-
-        <div className="p-6 border-b border-white/5 space-y-4 bg-white/[0.02]">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-pink-400 transition-colors" />
+        <div className="p-4 space-y-3 bg-black/20">
+          <div className="relative">
             <input
+              autoFocus
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="          曲名・アーティストで検索..."
-              className="w-full pl-12 pr-4 py-4 bg-black border border-white/10 rounded-2xl text-white placeholder:text-gray-600 focus:outline-none focus:border-pink-500/50 focus:ring-1 focus:ring-pink-500/50 transition-all"
+              placeholder="曲名・アーティストで検索..."
+              className="w-full pl-10 pr-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:border-pink-500 transition-colors"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
             {GENRES.map((genre) => (
               <button
                 key={genre}
                 onClick={() => setSelectedGenre(genre)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   selectedGenre === genre
-                    ? "bg-white text-black font-bold shadow-lg"
-                    : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+                    ? "bg-white text-black font-bold"
+                    : "bg-white/5 text-gray-400"
                 }`}
               >
                 {genre}
@@ -606,37 +597,25 @@ function SongPickerModal({
             ))}
           </div>
         </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar bg-black/20">
+        <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
           {filteredSongs.map((song) => (
             <button
               key={song.id}
               onClick={() => onSelect(song)}
-              className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-left transition-all border border-transparent hover:border-white/10 group"
+              className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors text-left group border-b border-white/5 last:border-0"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                <Music className="w-6 h-6 text-gray-500 group-hover:text-pink-400 transition-colors" />
+              <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-md group-hover:from-pink-900/50 group-hover:to-orange-900/50 transition-colors">
+                <Music className="w-5 h-5 text-gray-500 group-hover:text-pink-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white font-bold text-lg truncate group-hover:text-pink-300 transition-colors">
-                  {song.title}
-                </p>
+                <p className="text-white font-bold truncate">{song.title}</p>
                 <p className="text-gray-400 text-sm truncate">{song.artist}</p>
-              </div>
-              <div className="text-right hidden sm:block">
-                <p className="text-gray-300 font-mono text-sm">
-                  {song.bpm} BPM
-                </p>
-                <p className="text-gray-600 text-xs uppercase tracking-wider">
-                  {song.genre}
-                </p>
               </div>
             </button>
           ))}
-
           {filteredSongs.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-lg">No songs found</p>
+            <div className="text-center py-10 text-gray-500">
+              該当する曲がありません
             </div>
           )}
         </div>
@@ -645,7 +624,6 @@ function SongPickerModal({
   );
 }
 
-// Roulette Modal
 function RouletteModal({
   participants,
   onComplete,
@@ -660,14 +638,12 @@ function RouletteModal({
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<Participant | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState("All");
 
-  const filteredSongs = filterSongs(searchQuery, selectedGenre);
+  const filteredSongs = filterSongs(searchQuery, "All");
 
   const handleSelectSong = (song: Song) => {
     setSelectedSong(song);
     setStep("spin");
-
     setTimeout(() => {
       setSpinning(true);
       setTimeout(() => {
@@ -679,89 +655,59 @@ function RouletteModal({
     }, 500);
   };
 
-  const handleConfirm = () => {
-    if (selectedSong && winner) {
-      onComplete(selectedSong, winner.user_id);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-[#121212] border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+        className="w-full sm:max-w-xl h-[90vh] sm:h-[80vh] bg-[#1a1a1a] sm:rounded-3xl rounded-t-3xl border-t sm:border border-white/10 flex flex-col shadow-2xl overflow-hidden"
       >
         {step === "song" && (
           <>
-            <div className="flex items-center justify-between p-6 border-b border-white/5 bg-gradient-to-r from-pink-500/10 to-orange-500/10">
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-pink-900/20 to-orange-900/20">
               <div>
-                <h2 className="text-2xl font-bold text-white">Roulette</h2>
-                <p className="text-white/60 text-sm">
-                  運命の曲を選んでください
+                <h2 className="text-lg font-bold text-white">ルーレット</h2>
+                <p className="text-xs text-orange-300">
+                  まずは曲を選んでください
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70"
+                className="p-2 bg-white/5 rounded-full text-gray-400"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
-
-            <div className="p-6 border-b border-white/5 space-y-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="          曲名・アーティストで検索..."
-                  className="w-full pl-12 pr-4 py-4 bg-black border border-white/10 rounded-2xl text-white placeholder:text-gray-600 focus:outline-none focus:border-orange-500/50 transition-all"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                {GENRES.map((genre) => (
-                  <button
-                    key={genre}
-                    onClick={() => setSelectedGenre(genre)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                      selectedGenre === genre
-                        ? "bg-orange-500 text-white font-bold"
-                        : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    {genre}
-                  </button>
-                ))}
-              </div>
+            <div className="p-4">
+              <input
+                autoFocus
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="曲名で検索..."
+                className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-orange-500"
+              />
             </div>
-
-            <div className="max-h-[50vh] overflow-y-auto p-4 space-y-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar h-[50vh]">
               {filteredSongs.map((song) => (
                 <button
                   key={song.id}
                   onClick={() => handleSelectSong(song)}
-                  className="w-full flex items-center gap-4 p-4 bg-white/5 hover:bg-orange-500/10 rounded-2xl text-left transition-all border border-transparent hover:border-orange-500/30 group"
+                  className="w-full flex items-center gap-3 p-3 hover:bg-orange-500/10 rounded-xl transition-colors text-left border-b border-white/5 last:border-0"
                 >
-                  <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Music className="w-6 h-6 text-gray-500 group-hover:text-orange-400 transition-colors" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold text-lg truncate">
-                      {song.title}
-                    </p>
-                    <p className="text-gray-400 text-sm truncate">
-                      {song.artist}
-                    </p>
+                  <Music className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-white font-bold">{song.title}</p>
+                    <p className="text-xs text-gray-400">{song.artist}</p>
                   </div>
                 </button>
               ))}
@@ -770,38 +716,33 @@ function RouletteModal({
         )}
 
         {(step === "spin" || step === "result") && (
-          <div className="p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-            <h2 className="text-3xl font-bold text-white mb-2 tracking-wide">
-              {spinning ? "CHOOSING..." : "WINNER!"}
+          <div className="p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
+            <h2 className="text-2xl font-bold text-white mb-8 tracking-widest">
+              {spinning ? "抽選中..." : "決定！"}
             </h2>
-            {selectedSong && (
-              <p className="text-white/50 mb-10 text-lg">
-                Song: <span className="text-white">{selectedSong.title}</span>
-              </p>
-            )}
 
-            <div className="w-48 h-48 mx-auto mb-8 rounded-full bg-gradient-to-br from-pink-500 to-orange-400 flex items-center justify-center shadow-[0_0_40px_rgba(255,100,100,0.3)] border-4 border-white/10">
+            <div className="w-40 h-40 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center shadow-[0_0_50px_rgba(255,100,100,0.3)] mb-8 border-4 border-white/10 relative">
               {spinning ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{
-                    duration: 0.5,
+                    duration: 0.3,
                     repeat: Infinity,
                     ease: "linear",
                   }}
                 >
-                  <Dices className="w-20 h-20 text-white" />
+                  <Dices className="w-16 h-16 text-white" />
                 </motion.div>
-              ) : winner ? (
+              ) : (
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring" }}
-                  className="text-7xl font-bold text-white"
+                  className="text-6xl font-bold text-white"
                 >
-                  {winner.name.charAt(0).toUpperCase()}
+                  {winner?.name.charAt(0).toUpperCase()}
                 </motion.span>
-              ) : null}
+              )}
             </div>
 
             {winner && !spinning && (
@@ -810,14 +751,21 @@ function RouletteModal({
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full"
               >
-                <p className="text-2xl font-bold text-white mb-8">
-                  <span className="text-pink-400">{winner.name}</span> さんが
-                  <br />
-                  歌います！
-                </p>
+                <div className="mb-8">
+                  <p className="text-sm text-gray-400 mb-1">Singer</p>
+                  <p className="text-3xl font-bold text-white mb-2">
+                    {winner.name}
+                  </p>
+                  <p className="text-sm text-orange-400 bg-orange-900/30 inline-block px-3 py-1 rounded-full border border-orange-500/30">
+                    {selectedSong?.title}
+                  </p>
+                </div>
                 <button
-                  onClick={handleConfirm}
-                  className="w-full max-w-xs py-4 bg-white text-black font-bold text-lg rounded-full shadow-lg hover:scale-105 transition-transform"
+                  onClick={() =>
+                    selectedSong &&
+                    onComplete(selectedSong, winner?.user_id || "")
+                  }
+                  className="w-full py-4 bg-white text-black font-bold text-lg rounded-xl shadow-lg active:scale-95 transition-transform"
                 >
                   決定する
                 </button>
