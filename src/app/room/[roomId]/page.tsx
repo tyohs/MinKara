@@ -796,7 +796,7 @@ function RouletteModal({
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  type="spring"
+                  transition={{ type: "spring" }}
                   className="text-7xl font-bold text-white"
                 >
                   {winner.name.charAt(0).toUpperCase()}
