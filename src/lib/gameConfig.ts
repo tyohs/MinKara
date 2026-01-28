@@ -74,7 +74,7 @@ export const NOTE_CONFIG = {
   /** ノーツ幅（レーン幅に対する割合） */
   widthRatio: 0.75,
   /** 画面内に表示する拍数（論理的なスクロール速度の基準） */
-  BEATS_VISIBLE_ON_SCREEN: 4,
+  beatsVisible: 4,
 } as const;
 
 // ========================================

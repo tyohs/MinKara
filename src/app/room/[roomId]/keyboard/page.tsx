@@ -71,8 +71,6 @@ export default function KeyboardPage() {
     if (gameEnded) return;
     setGameEnded(true);
 
-    console.log('Game ended:', { score, maxCombo });
-
     // スコアを送信（セッションがある場合のみ）
     if (session?.id) {
       const userId = getUserId();

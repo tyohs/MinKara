@@ -71,7 +71,7 @@ export default function RoleSelectPage() {
         if (session.status === 'role_select') {
            // We only need one person to fire this. 
            // Singer is a good candidate, or just check role.
-           if (isSinger || session.singer_id === myUserId) {
+           if (isSinger) {
              await startPlaying(session.id);
            }
         }

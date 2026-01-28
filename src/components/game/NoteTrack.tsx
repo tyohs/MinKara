@@ -18,11 +18,14 @@ export default function NoteTrack({
 }: NoteTrackProps) {
   const visibleDuration = useMemo(() => {
     const msPerBeat = 60000 / bpm;
-    return msPerBeat * NOTE_CONFIG.BEATS_VISIBLE_ON_SCREEN;
+    return msPerBeat * NOTE_CONFIG.beatsVisible;
   }, [bpm]);
+
+  // Filter notes: use visibleDuration for future range to ensure consistency with note positioning
+  const maxVisibleFuture = Math.max(visibleDuration, NOTE_CONFIG.visibleRangeFuture);
   const visibleNotes = notes.filter(note => {
     const timeUntilHit = note.time - currentTime;
-    return timeUntilHit > NOTE_CONFIG.visibleRangePast && timeUntilHit < NOTE_CONFIG.visibleRangeFuture;
+    return timeUntilHit > NOTE_CONFIG.visibleRangePast && timeUntilHit < maxVisibleFuture;
   });
 
   return (

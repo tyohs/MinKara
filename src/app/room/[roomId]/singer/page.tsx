@@ -38,7 +38,7 @@ export default function SingerPage() {
 
     audio.addEventListener('ended', handleEnded);
     return () => audio.removeEventListener('ended', handleEnded);
-  }, [audioRef.current, roomId, router]);
+  }, [session?.song_started_at, song?.audio_url, roomId, router]);
 
   if (!session || !song) {
     return (
