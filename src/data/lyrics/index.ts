@@ -30,7 +30,7 @@ export function getCurrentLyric(lyrics: SongLyrics, currentTime: number): string
     const line = lines[i];
     if (currentTime >= line.time) {
       // endTimeが設定されていて、それを過ぎていたら表示しない
-      if (line.endTime && currentTime > line.endTime) {
+      if (line.endTime != null && currentTime > line.endTime) {
         return null;
       }
       return line.text;

@@ -11,96 +11,24 @@
   position: relative;
 }
 
-/* ========== 背景エフェクト ========== */
-.backgroundEffects {
+/* ========== 背景動画 ========== */
+.backgroundVideo {
   position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   z-index: 0;
+  pointer-events: none;
 }
 
-/* グラデーションオーブ */
-.gradientOrb1 {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(138, 43, 226, 0.4) 0%, transparent 70%);
-  top: -100px;
-  right: -50px;
-  animation: float1 8s ease-in-out infinite;
-}
-
-.gradientOrb2 {
-  position: absolute;
-  width: 250px;
-  height: 250px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(75, 0, 130, 0.5) 0%, transparent 70%);
-  bottom: 20%;
-  left: -80px;
-  animation: float2 10s ease-in-out infinite;
-}
-
-.gradientOrb3 {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(218, 112, 214, 0.3) 0%, transparent 70%);
-  top: 40%;
-  right: -60px;
-  animation: float3 12s ease-in-out infinite;
-}
-
-@keyframes float1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-30px, 30px) scale(1.1); }
-}
-
-@keyframes float2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, -20px) scale(1.15); }
-}
-
-@keyframes float3 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-20px, 40px) scale(1.05); }
-}
-
-/* パーティクル */
-.particlesContainer {
+.videoOverlay {
   position: absolute;
   inset: 0;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 50%;
-  bottom: -10px;
-  animation: rise linear infinite;
-  box-shadow: 0 0 6px rgba(138, 43, 226, 0.8);
-}
-
-@keyframes rise {
-  0% {
-    transform: translateY(0) scale(1);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-100vh) scale(0.5);
-    opacity: 0;
-  }
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* ========== ヘッダー ========== */

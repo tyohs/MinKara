@@ -111,25 +111,18 @@ export default function SingerGame({
 
   return (
     <div className={styles.container}>
-      {/* 背景エフェクト */}
-      <div className={styles.backgroundEffects}>
-        <div className={styles.gradientOrb1} />
-        <div className={styles.gradientOrb2} />
-        <div className={styles.gradientOrb3} />
-        <div className={styles.particlesContainer}>
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={i}
-              className={styles.particle}
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${5 + Math.random() * 5}s`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
+      {/* 背景動画 */}
+      <video
+        className={styles.backgroundVideo}
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden="true"
+      >
+        <source src="/video/Ambient_Light_Orb_Loop.mp4" type="video/mp4" />
+      </video>
+      <div className={styles.videoOverlay} />
 
       {/* ヘッダー：役割と曲情報 */}
       <header className={styles.header}>
@@ -146,7 +139,7 @@ export default function SingerGame({
         className={styles.lyricsArea}
         ref={lyricsContainerRef}
         onScroll={handleScroll}
-        onTouchStart={() => { isUserScrolling.current = true; }}
+        onTouchStart={handleScroll}
       >
         {lyrics && lyrics.lines.length > 0 ? (
           <div className={styles.lyricsContainer}>

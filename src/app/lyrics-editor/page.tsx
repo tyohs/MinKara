@@ -57,6 +57,42 @@ export default function LyricsEditorPage() {
     };
   }, [selectedSongId]);
 
+  // 再生/停止トグル
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.paused) {
+      audio.play();
+      setIsPlaying(true);
+    } else {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  }, []);
+
+  // 録音開始
+  const startRecording = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || lyrics.length === 0) return;
+
+    audio.currentTime = 0;
+    setCurrentLineIndex(0);
+    setIsRecording(true);
+    audio.play();
+    setIsPlaying(true);
+  }, [lyrics.length]);
+
+  // 録音停止
+  const stopRecording = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+    }
+    setIsPlaying(false);
+    setIsRecording(false);
+  }, []);
+
   // キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -99,40 +135,7 @@ export default function LyricsEditorPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isRecording, currentLineIndex, currentTime, lyrics.length]);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio.play();
-      setIsPlaying(true);
-    }
-  };
-
-  const startRecording = () => {
-    const audio = audioRef.current;
-    if (!audio || lyrics.length === 0) return;
-
-    audio.currentTime = 0;
-    setCurrentLineIndex(0);
-    setIsRecording(true);
-    audio.play();
-    setIsPlaying(true);
-  };
-
-  const stopRecording = () => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-    }
-    setIsPlaying(false);
-    setIsRecording(false);
-  };
+  }, [isRecording, currentLineIndex, currentTime, lyrics.length, togglePlay, startRecording]);
 
   const seekTo = (time: number) => {
     const audio = audioRef.current;

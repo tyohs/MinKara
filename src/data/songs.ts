@@ -20,7 +20,7 @@ export const SONGS: Song[] = [
     bpm: 96,
     genre: '唱歌',
     duration: 211,
-    audio_url: '/audio/仰げば尊し.wav',
+    audio_url: '/audio/仰げば尊し.mp3',
   },
   {
     id: 'song-003',

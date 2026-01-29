@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SingerGame } from '@/components/game';
 import { getSongById } from '@/data/songs';
@@ -15,6 +15,7 @@ export default function SingerPage() {
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 曲データを取得
   const song = useMemo(() => {
@@ -30,26 +31,30 @@ export default function SingerPage() {
     song?.audio_url || ''
   );
 
-  // ゲーム開始の準備
+  // ゲーム開始の準備（status変更に追従）
   useEffect(() => {
-    // セッションがplaying状態になったら開始
-    if (!session || session.status === 'playing') {
-      setIsReady(true);
-    }
-  }, [session]);
+    setIsReady(session?.status === 'playing');
+  }, [session?.status]);
 
   // ゲーム終了時のコールバック
   const handleGameEnd = useCallback(() => {
     if (gameEnded) return;
     setGameEnded(true);
 
-    console.log('Singer game ended');
-
     // リザルト画面へ遷移（3秒後）
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       router.push(`/room/${roomId}`);
     }, 3000);
   }, [roomId, router, gameEnded]);
+
+  // クリーンアップ
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!isReady || !song) {
     return (
@@ -83,7 +88,7 @@ export default function SingerPage() {
       <audio ref={audioRef} src={song.audio_url} preload="auto" />
       <SingerGame
         song={song}
-        songStartedAt={session?.song_started_at ?? new Date().toISOString()}
+        songStartedAt={session?.song_started_at ?? null}
         onGameEnd={handleGameEnd}
       />
     </>
