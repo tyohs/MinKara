@@ -88,7 +88,11 @@ export default function RoleSelectPage() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedInstrument, setSelectedInstrument] =
     useState<InstrumentType | null>(null);
-  const [hasStartedRoleSelect, setHasStartedRoleSelect] = useState(false);
+
+  // ★修正1: useState を削除し、useRef に変更
+  // これにより、値を変更しても再レンダリングが起きないため警告が消える
+  const hasStartedRoleSelectRef = useRef(false);
+
   const [isReady, setIsReady] = useState(false);
 
   // Audio ref to manage sound playback
@@ -136,14 +140,19 @@ export default function RoleSelectPage() {
     fetchParticipants(roomId).then(setParticipants);
   }, [roomId, setParticipants]);
 
+  // ★修正2: useRef を使って判定するように変更
   useEffect(() => {
-    if (session && session.status === "countdown" && !hasStartedRoleSelect) {
-      setHasStartedRoleSelect(true);
+    if (
+      session &&
+      session.status === "countdown" &&
+      !hasStartedRoleSelectRef.current
+    ) {
+      hasStartedRoleSelectRef.current = true; // Refの書き換えはレンダリングを引き起こさない
       startRoleSelect(session.id).then(() => {
         refetch();
       });
     }
-  }, [session, hasStartedRoleSelect, refetch]);
+  }, [session, refetch]); // hasStartedRoleSelectRef は依存配列に不要
 
   useEffect(() => {
     if (isComplete && session && myUserId) {
@@ -208,8 +217,8 @@ export default function RoleSelectPage() {
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#0a0a1a] text-white">
       {/* Background */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-black opacity-90" />
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(76,29,149,0.3),_transparent_70%)]" />
+        <div className="absolute inset-0 bg-linear-to-br from-indigo-950 via-purple-950 to-black opacity-90" />
+        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(76,29,149,0.3),transparent_70%)]" />
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -274,7 +283,7 @@ export default function RoleSelectPage() {
           transition={{ delay: 0.3 }}
           className="w-full max-w-4xl bg-white/5 border border-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-6 flex items-center gap-4 sm:gap-6 mb-10 shadow-lg"
         >
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/30 shrink-0">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-linear-to-tr from-pink-500 to-rose-500 flex items-center justify-center shadow-lg shadow-pink-500/30 shrink-0">
             <Mic className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
           </div>
           <div>
@@ -304,9 +313,9 @@ export default function RoleSelectPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-8"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8 p-2">
                   <RoleCard
-                    title="BAND MEMBER"
+                    title="バンドメンバー"
                     subtitle="楽器を演奏して盛り上げる"
                     icon={Piano}
                     isSelected={selectedRole === "band"}
@@ -314,7 +323,7 @@ export default function RoleSelectPage() {
                     color="cyan"
                   />
                   <RoleCard
-                    title="OBSTRUCT"
+                    title="お邪魔"
                     subtitle="お邪魔アイテムで妨害！？"
                     icon={Sparkles}
                     isSelected={selectedRole === "ojama"}
@@ -332,12 +341,12 @@ export default function RoleSelectPage() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
+                      className="w-full"
                     >
-                      <p className="text-center text-gray-400 mb-4 text-sm uppercase tracking-[0.2em] font-bold mt-4">
-                        Choose Your Gear
+                      <p className="text-center text-gray-300 mb-4 text-sm font-bold mt-4 tracking-wider">
+                        楽器を選んでください
                       </p>
-                      <div className="grid grid-cols-3 gap-3 md:gap-6">
+                      <div className="grid grid-cols-3 gap-3 md:gap-6 p-4">
                         {INSTRUMENTS.map((inst, i) => (
                           <InstrumentCard
                             key={inst.id}
@@ -355,6 +364,8 @@ export default function RoleSelectPage() {
                   )}
                 </AnimatePresence>
 
+                <div className="h-10 md:h-16 w-full" />
+
                 <motion.button
                   whileHover={{
                     scale: 1.02,
@@ -366,9 +377,9 @@ export default function RoleSelectPage() {
                     !selectedRole ||
                     (selectedRole === "band" && !selectedInstrument)
                   }
-                  className="w-full py-4 sm:py-5 bg-white text-black font-black text-xl sm:text-2xl rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-30 disabled:shadow-none transition-all mt-4 tracking-widest"
+                  className="w-full py-4 sm:py-5 bg-white text-black font-black text-xl sm:text-2xl rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] disabled:opacity-30 disabled:shadow-none transition-all tracking-widest"
                 >
-                  READY TO ROCK
+                  準備完了！
                 </motion.button>
               </motion.div>
             ) : (
@@ -381,10 +392,10 @@ export default function RoleSelectPage() {
                   <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-white" />
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black italic text-white mb-2 tracking-wider">
-                  YOU ARE READY!
+                  準備完了！
                 </h2>
                 <p className="text-gray-400 text-lg font-mono">
-                  WAITING FOR OTHERS...
+                  他のメンバーを待っています...
                 </p>
               </motion.div>
             )}
@@ -395,7 +406,7 @@ export default function RoleSelectPage() {
             animate={{ scale: 1, opacity: 1 }}
             className="flex flex-col items-center justify-center py-12 sm:py-20 w-full max-w-2xl bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm shadow-[0_0_50px_rgba(236,72,153,0.1)]"
           >
-            <h2 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-6 text-center italic tracking-tighter">
+            <h2 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-linear-to-r from-pink-400 to-purple-400 mb-6 text-center italic tracking-tighter">
               STAGE IS YOURS
             </h2>
             <p className="text-gray-300 text-lg mb-8 max-w-md text-center leading-relaxed px-4 font-medium">
@@ -416,7 +427,6 @@ export default function RoleSelectPage() {
 
 // Sub Components with Proper Types
 
-// RoleCardのProps型定義
 interface RoleCardProps {
   title: string;
   subtitle: string;
@@ -447,10 +457,10 @@ function RoleCard({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`relative p-6 sm:p-8 rounded-2xl text-left transition-all overflow-hidden border w-full group ${
+      className={`relative p-6 sm:p-8 rounded-xl text-left transition-all border w-full group ${
         isSelected
-          ? `${activeBg} ${activeBorder} ${activeShadow}`
-          : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20"
+          ? `${activeBg} ${activeBorder} ${activeShadow} z-10`
+          : "bg-black/40 border-white/10 hover:bg-white/10 hover:border-white/20"
       }`}
     >
       <div
@@ -463,7 +473,7 @@ function RoleCard({
         <Icon className="w-6 h-6 sm:w-8 sm:h-8" />
       </div>
       <h3
-        className={`text-lg sm:text-2xl font-black italic mb-1 uppercase tracking-wider ${isSelected ? "text-white" : "text-gray-300 group-hover:text-white"}`}
+        className={`text-lg sm:text-2xl font-bold mb-1 tracking-wide ${isSelected ? "text-white" : "text-gray-200 group-hover:text-white"}`}
       >
         {title}
       </h3>
@@ -473,8 +483,9 @@ function RoleCard({
 
       {isSelected && (
         <motion.div
-          layoutId="role-highlight"
-          className={`absolute inset-0 border-2 rounded-2xl pointer-events-none ${
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`absolute inset-0 border-2 rounded-xl pointer-events-none ${
             isCyan ? "border-cyan-400" : "border-purple-500"
           }`}
         />
@@ -483,7 +494,6 @@ function RoleCard({
   );
 }
 
-// InstrumentCardのProps型定義
 interface InstrumentCardProps {
   instrument: InstrumentData;
   isSelected: boolean;
@@ -507,18 +517,18 @@ function InstrumentCard({
       onClick={onClick}
       className={`relative group flex flex-col items-center p-4 sm:p-6 rounded-xl border transition-all ${
         isSelected
-          ? `bg-gradient-to-br ${instrument.color} border-white/50 shadow-lg ${instrument.shadow} scale-105`
-          : "bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20"
+          ? `bg-linear-to-br ${instrument.color} border-white/50 shadow-lg ${instrument.shadow} scale-105 z-10`
+          : "bg-black/40 border-white/10 hover:bg-white/10 hover:border-white/20"
       }`}
     >
       <instrument.Icon
         className={`w-10 h-10 sm:w-12 sm:h-12 mb-3 transition-colors ${
-          isSelected ? "text-white" : "text-gray-500 group-hover:text-white"
+          isSelected ? "text-white" : "text-gray-400 group-hover:text-white"
         }`}
       />
       <span
-        className={`text-xs sm:text-sm font-black tracking-wider uppercase ${
-          isSelected ? "text-white" : "text-gray-500 group-hover:text-white"
+        className={`text-xs sm:text-sm font-bold tracking-wider ${
+          isSelected ? "text-white" : "text-gray-400 group-hover:text-white"
         }`}
       >
         {instrument.name}
