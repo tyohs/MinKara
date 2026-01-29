@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Piano, Guitar, Drum, Sparkles, Timer, Music, Mic } from 'lucide-react';
@@ -14,6 +14,14 @@ type Role = 'band' | 'ojama';
 type Instrument = 'keyboard' | 'guitar' | 'drums';
 
 const ROLE_SELECT_DURATION = 10; // seconds
+
+// Sound effect paths
+const SOUND_EFFECTS = {
+  keyboard: '/soundEffect/roleSelect/roleSelect-keyboard.mp3',
+  guitar: '/soundEffect/roleSelect/roleSelect-guitar.mp3',
+  drums: '/soundEffect/roleSelect/roleSelect-drum.mp3',
+  ojama: '/soundEffect/roleSelect/roleSelect-ojama.mp3',
+} as const;
 
 const INSTRUMENTS = [
   { id: 'keyboard' as Instrument, name: 'キーボード', Icon: Piano, color: 'from-amber-400 to-yellow-500' },
@@ -32,6 +40,36 @@ export default function RoleSelectPage() {
   const [selectedInstrument, setSelectedInstrument] = useState<Instrument | null>(null);
   const [hasStartedRoleSelect, setHasStartedRoleSelect] = useState(false);
   const [isReady, setIsReady] = useState(false);
+
+  // Audio ref to manage sound playback
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Sound effect player
+  const playSound = useCallback((soundKey: keyof typeof SOUND_EFFECTS) => {
+    // Stop any currently playing sound
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    
+    const audio = new Audio(SOUND_EFFECTS[soundKey]);
+    audio.volume = 1; // 音量: 0（無音）〜 1（最大）
+    audioRef.current = audio;
+    audio.play().catch((error) => {
+      console.warn('Sound playback failed:', error);
+    });
+  }, []);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Game session with realtime sync
   const { session, refetch } = useGameSession(roomId);
@@ -83,7 +121,7 @@ export default function RoleSelectPage() {
         if (isSinger) {
           router.push(`/room/${roomId}/singer`);
         } else if (selectedRole === 'ojama') {
-          router.push(`/room/${roomId}/ojama`);
+          router.push(`/room/${roomId}/obstruct`);
         } else if (selectedRole === 'band') {
            const instrument = selectedInstrument || 'keyboard'; // Fallback
            if (instrument === 'keyboard') {
@@ -94,7 +132,7 @@ export default function RoleSelectPage() {
         } else {
           // If no role selected by timeout, default to spectator or ojama?
           // Let's send them to ojama for now to participate
-           router.push(`/room/${roomId}/ojama`);
+           router.push(`/room/${roomId}/obstruct`);
         }
       };
       
@@ -221,7 +259,10 @@ export default function RoleSelectPage() {
                 transition={{ delay: 0.5 }}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => setSelectedRole('ojama')}
+                onClick={() => {
+                  setSelectedRole('ojama');
+                  playSound('ojama');
+                }}
                 className={`p-6 rounded-2xl text-left transition-all ${
                   selectedRole === 'ojama'
                     ? 'bg-gradient-to-br from-[var(--coral)] to-[var(--peach)] text-white shadow-lg scale-105'
@@ -263,7 +304,10 @@ export default function RoleSelectPage() {
                         transition={{ delay: index * 0.1 }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setSelectedInstrument(instrument.id)}
+                        onClick={() => {
+                          setSelectedInstrument(instrument.id);
+                          playSound(instrument.id);
+                        }}
                         className={`p-4 rounded-xl text-center transition-all ${
                           selectedInstrument === instrument.id
                             ? `bg-gradient-to-br ${instrument.color} text-white shadow-lg`
