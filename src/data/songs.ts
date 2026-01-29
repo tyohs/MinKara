@@ -10,7 +10,7 @@ export const SONGS: Song[] = [
     artist: '魔王魂, 森田交一',
     bpm: 158,
     genre: 'Pop',
-    duration: 243,
+    duration: 276,
     audio_url: '/audio/shining_star.mp3',
   },
   {

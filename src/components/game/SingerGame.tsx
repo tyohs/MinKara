@@ -1,19 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { getLyricsForSong } from '@/data/lyrics';
+import FanServiceDisplay from './FanServiceDisplay';
 import type { Song } from '@/types';
+import { FanServiceRequest } from '@/types/fanService';
+import { supabase } from '@/lib/supabase';
 import styles from './SingerGame.module.css';
 
 interface SingerGameProps {
   song: Song;
   songStartedAt: string | null;
+  roomId?: string;
   onGameEnd?: () => void;
 }
 
 export default function SingerGame({
   song,
   songStartedAt,
+  roomId = '',
   onGameEnd,
 }: SingerGameProps) {
   const [currentTime, setCurrentTime] = useState(0);
@@ -21,6 +26,33 @@ export default function SingerGame({
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
   const isUserScrolling = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [fanServiceRequest, setFanServiceRequest] = useState<FanServiceRequest | null>(null);
+
+  // ファンサ要求の受信リスナー
+  useEffect(() => {
+      if (!roomId) return;
+
+    const channel = supabase.channel(`room:${roomId}`);
+    
+    channel
+      .on('broadcast', { event: 'fan_service' }, (payload) => {
+        console.log('[SingerGame] Received fan_service event:', payload);
+        const request = payload.payload as FanServiceRequest;
+        setFanServiceRequest(request);
+      })
+      .subscribe((status) => {
+        // subscription status check
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId]);
+
+  // ファンサ表示完了コールバック
+  const handleFanServiceDismiss = useCallback(() => {
+    setFanServiceRequest(null);
+  }, []);
 
   // 歌詞データを取得
   const lyrics = useMemo(() => getLyricsForSong(song.id), [song.id]);
@@ -108,9 +140,20 @@ export default function SingerGame({
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
+  
   return (
     <div className={styles.container}>
+
+
+
+      {/* ファンサ表示（全画面オーバーレイ） */}
+      {fanServiceRequest && (
+        <FanServiceDisplay 
+          request={fanServiceRequest} 
+          onDismiss={handleFanServiceDismiss} 
+        />
+      )}
+
       {/* 背景動画 */}
       <video
         className={styles.backgroundVideo}
