@@ -12,6 +12,7 @@ import {
   Music,
   Mic,
   CheckCircle2,
+  type LucideIcon,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRoomStore, fetchParticipants } from "@/store/useRoomStore";
@@ -24,7 +25,7 @@ import {
 import { useSyncedCountdown } from "@/hooks/useSyncedCountdown";
 
 type Role = "band" | "ojama";
-type Instrument = "keyboard" | "guitar" | "drums";
+type InstrumentType = "keyboard" | "guitar" | "drums";
 
 const ROLE_SELECT_DURATION = 10; // seconds
 
@@ -36,9 +37,20 @@ const SOUND_EFFECTS = {
   ojama: "/soundEffect/roleSelect/roleSelect-ojama.mp3",
 } as const;
 
-const INSTRUMENTS = [
+// 楽器データの型定義
+type InstrumentData = {
+  id: InstrumentType;
+  name: string;
+  Icon: LucideIcon;
+  color: string;
+  displayColor: string;
+  shadow: string;
+  border: string;
+};
+
+const INSTRUMENTS: InstrumentData[] = [
   {
-    id: "keyboard" as Instrument,
+    id: "keyboard",
     name: "キーボード",
     Icon: Piano,
     color: "from-amber-400 to-yellow-500",
@@ -47,7 +59,7 @@ const INSTRUMENTS = [
     border: "border-amber-500",
   },
   {
-    id: "guitar" as Instrument,
+    id: "guitar",
     name: "ギター",
     Icon: Guitar,
     color: "from-orange-500 to-red-500",
@@ -56,7 +68,7 @@ const INSTRUMENTS = [
     border: "border-red-500",
   },
   {
-    id: "drums" as Instrument,
+    id: "drums",
     name: "ドラム",
     Icon: Drum,
     color: "from-emerald-500 to-green-600",
@@ -75,7 +87,7 @@ export default function RoleSelectPage() {
 
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedInstrument, setSelectedInstrument] =
-    useState<Instrument | null>(null);
+    useState<InstrumentType | null>(null);
   const [hasStartedRoleSelect, setHasStartedRoleSelect] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
@@ -84,21 +96,19 @@ export default function RoleSelectPage() {
 
   // Sound effect player
   const playSound = useCallback((soundKey: keyof typeof SOUND_EFFECTS) => {
-    // Stop any currently playing sound
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
 
     const audio = new Audio(SOUND_EFFECTS[soundKey]);
-    audio.volume = 1; // 音量: 0（無音）〜 1（最大）
+    audio.volume = 1;
     audioRef.current = audio;
     audio.play().catch((error) => {
       console.warn("Sound playback failed:", error);
     });
   }, []);
 
-  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -109,10 +119,8 @@ export default function RoleSelectPage() {
     };
   }, []);
 
-  // Game session with realtime sync
   const { session, refetch } = useGameSession(roomId);
 
-  // Synced countdown based on role_select_started_at
   const { remaining: countdown, isComplete } = useSyncedCountdown(
     session?.role_select_started_at || null,
     ROLE_SELECT_DURATION,
@@ -124,12 +132,10 @@ export default function RoleSelectPage() {
     (p) => p.user_id === session?.singer_id,
   );
 
-  // Load participants
   useEffect(() => {
     fetchParticipants(roomId).then(setParticipants);
   }, [roomId, setParticipants]);
 
-  // When session arrives and is in countdown status, transition to role_select
   useEffect(() => {
     if (session && session.status === "countdown" && !hasStartedRoleSelect) {
       setHasStartedRoleSelect(true);
@@ -139,7 +145,6 @@ export default function RoleSelectPage() {
     }
   }, [session, hasStartedRoleSelect, refetch]);
 
-  // Navigate to game when countdown completes
   useEffect(() => {
     if (isComplete && session && myUserId) {
       const performTransition = async () => {
@@ -154,7 +159,7 @@ export default function RoleSelectPage() {
         } else if (selectedRole === "ojama") {
           router.push(`/room/${roomId}/obstruct`);
         } else if (selectedRole === "band") {
-          const instrument = selectedInstrument || "keyboard"; // Fallback
+          const instrument = selectedInstrument || "keyboard";
           if (instrument === "keyboard") {
             router.push(`/room/${roomId}/keyboard`);
           } else {
@@ -181,7 +186,6 @@ export default function RoleSelectPage() {
   const handleStart = async () => {
     if (!myUserId || !session) return;
 
-    // Update participant role in database
     const role = isSinger ? "singer" : selectedRole || "band";
     const instrument =
       selectedRole === "band" ? selectedInstrument || "keyboard" : null;
@@ -195,7 +199,6 @@ export default function RoleSelectPage() {
       .eq("room_id", roomId)
       .eq("user_id", myUserId);
 
-    // Mark as locally ready to update UI
     setIsReady(true);
   };
 
@@ -203,11 +206,10 @@ export default function RoleSelectPage() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-[#0a0a1a] text-white">
-      {/* Animated Gradient Background */}
+      {/* Background */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-purple-950 to-black opacity-90" />
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,_rgba(76,29,149,0.3),_transparent_70%)]" />
-        {/* Grid Pattern */}
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -218,9 +220,8 @@ export default function RoleSelectPage() {
         />
       </div>
 
-      {/* Main Content Container */}
       <div className="relative z-10 w-full max-w-5xl px-6 flex flex-col h-full justify-center items-center">
-        {/* Header Section */}
+        {/* Header */}
         <div className="w-full flex justify-between items-start mb-8 sm:mb-12 max-w-4xl">
           <div className="text-left">
             <motion.div
@@ -303,7 +304,6 @@ export default function RoleSelectPage() {
                 exit={{ opacity: 0 }}
                 className="space-y-8"
               >
-                {/* Role Toggle */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-8">
                   <RoleCard
                     title="BAND MEMBER"
@@ -326,7 +326,6 @@ export default function RoleSelectPage() {
                   />
                 </div>
 
-                {/* Instrument Selector */}
                 <AnimatePresence mode="wait">
                   {selectedRole === "band" && (
                     <motion.div
@@ -356,7 +355,6 @@ export default function RoleSelectPage() {
                   )}
                 </AnimatePresence>
 
-                {/* Ready Button */}
                 <motion.button
                   whileHover={{
                     scale: 1.02,
@@ -407,7 +405,6 @@ export default function RoleSelectPage() {
             </p>
             <div className="relative">
               <div className="absolute inset-0 bg-pink-500/30 blur-3xl rounded-full animate-pulse" />
-              {/* animate-bounce を削除し、より静的な存在感に変更 */}
               <Mic className="relative w-20 h-20 sm:w-24 sm:h-24 text-pink-400" />
             </div>
           </motion.div>
@@ -417,7 +414,17 @@ export default function RoleSelectPage() {
   );
 }
 
-// Sub Components
+// Sub Components with Proper Types
+
+// RoleCardのProps型定義
+interface RoleCardProps {
+  title: string;
+  subtitle: string;
+  icon: LucideIcon;
+  isSelected: boolean;
+  onClick: () => void;
+  color: "cyan" | "purple";
+}
 
 function RoleCard({
   title,
@@ -426,9 +433,8 @@ function RoleCard({
   isSelected,
   onClick,
   color,
-}: any) {
+}: RoleCardProps) {
   const isCyan = color === "cyan";
-  // Use explicit styles to ensure high contrast and visibility
   const activeBorder = isCyan ? "border-cyan-400" : "border-purple-500";
   const activeBg = isCyan ? "bg-cyan-950/60" : "bg-purple-950/60";
   const activeShadow = isCyan
@@ -477,7 +483,20 @@ function RoleCard({
   );
 }
 
-function InstrumentCard({ instrument, isSelected, onClick, index }: any) {
+// InstrumentCardのProps型定義
+interface InstrumentCardProps {
+  instrument: InstrumentData;
+  isSelected: boolean;
+  onClick: () => void;
+  index: number;
+}
+
+function InstrumentCard({
+  instrument,
+  isSelected,
+  onClick,
+  index,
+}: InstrumentCardProps) {
   return (
     <motion.button
       initial={{ y: 20, opacity: 0 }}
