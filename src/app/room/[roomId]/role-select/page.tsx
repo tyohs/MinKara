@@ -18,7 +18,7 @@ const ROLE_SELECT_DURATION = 10; // seconds
 // Sound effect paths
 const SOUND_EFFECTS = {
   keyboard: '/soundEffect/roleSelect/roleSelect-keyboard.mp3',
-  guitar: '/soundEffect/roleSelect/roleSelect-guiter.mp3',
+  guitar: '/soundEffect/roleSelect/roleSelect-guitar.mp3',
   drums: '/soundEffect/roleSelect/roleSelect-drum.mp3',
   ojama: '/soundEffect/roleSelect/roleSelect-ojama.mp3',
 } as const;
@@ -58,6 +58,17 @@ export default function RoleSelectPage() {
     audio.play().catch((error) => {
       console.warn('Sound playback failed:', error);
     });
+  }, []);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   // Game session with realtime sync
