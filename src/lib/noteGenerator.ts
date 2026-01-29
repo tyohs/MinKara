@@ -24,15 +24,16 @@ export function generateNotesFromBPM(options: GenerateNotesOptions): NoteData[] 
   const notes: NoteData[] = [];
   const beatDuration = 60000 / bpm;
   
+  // 難易度ごとの拍分割（数値が大きいほどノーツが多い）
   const beatDivisor = {
-    easy: 1,
-    normal: 2,
-    hard: 4,
+    easy: 0.5,    // 2拍に1回
+    normal: 1,    // 1拍に1回
+    hard: 2,      // 半拍に1回
   }[difficulty];
 
   const noteInterval = beatDuration / beatDivisor;
   const totalMs = duration * 1000;
-  const startOffset = 1000;
+  const startOffset = 2000; // 2秒後から開始
   
   let time = startOffset;
   let prevLane = -1;
@@ -41,11 +42,6 @@ export function generateNotesFromBPM(options: GenerateNotesOptions): NoteData[] 
     let lane = Math.floor(Math.random() * LANE_COUNT);
     if (lane === prevLane && Math.random() > 0.3) {
       lane = (lane + Math.floor(Math.random() * (LANE_COUNT - 1)) + 1) % LANE_COUNT;
-    }
-    
-    if (Math.random() > 0.85) {
-      time += noteInterval;
-      continue;
     }
 
     const isSpecial = Math.random() < specialNoteChance;
@@ -62,6 +58,7 @@ export function generateNotesFromBPM(options: GenerateNotesOptions): NoteData[] 
     time += noteInterval;
   }
 
+  console.log(`[generateNotesFromBPM] BPM: ${bpm}, Duration: ${duration}s, Notes: ${notes.length}`);
   return notes;
 }
 

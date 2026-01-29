@@ -49,26 +49,49 @@ export function clearChartCache(): void {
 }
 
 /**
- * デモ用の短い譜面を生成
+ * デモ用の譜面を生成（テスト・デバッグ用に十分な長さ）
  */
 export function generateDemoChart(): Chart {
   const notes: NoteData[] = [];
   const bpm = 120;
-  const beatMs = 60000 / bpm;
+  const beatMs = 60000 / bpm; // 500ms per beat
+  const durationSeconds = 360; // 6分間
+  const totalBeats = Math.floor((durationSeconds * 1000) / beatMs);
+  const targetNotes = 1200; // 目標ノーツ数
+  const skipRate = Math.max(0, 1 - (targetNotes / totalBeats)); // スキップ率を計算
 
-  for (let beat = 0; beat < 64; beat++) {
-    const time = 2000 + beat * beatMs;
-    const lane = beat % LANE_COUNT;
+  let prevLane = -1;
+  let noteCount = 0;
+
+  for (let beat = 0; beat < totalBeats && noteCount < targetNotes; beat++) {
+    // ノーツ数調整のためのスキップ
+    if (skipRate > 0 && Math.random() < skipRate) {
+      continue;
+    }
+
+    const time = 2000 + beat * beatMs; // 2秒後から開始
+    
+    // ランダムレーン（連続同一レーン回避）
+    let lane = Math.floor(Math.random() * LANE_COUNT);
+    if (lane === prevLane && Math.random() > 0.3) {
+      lane = (lane + Math.floor(Math.random() * (LANE_COUNT - 1)) + 1) % LANE_COUNT;
+    }
+    
     const isSpecial = beat % 16 === 15;
 
     notes.push({
-      id: `demo-${beat}`,
+      id: `demo-${noteCount}`,
       lane,
       time,
       type: isSpecial ? 'special' : 'normal',
       hit: false,
     });
+
+    prevLane = lane;
+    noteCount++;
   }
+
+  console.log('[generateDemoChart] Generated notes count:', notes.length);
 
   return {
     songId: 'demo',
