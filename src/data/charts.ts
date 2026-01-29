@@ -91,7 +91,9 @@ export function generateDemoChart(): Chart {
     noteCount++;
   }
 
-  console.log('[generateDemoChart] Generated notes count:', notes.length);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[generateDemoChart] Generated notes count:', notes.length);
+  }
 
   return {
     songId: 'demo',

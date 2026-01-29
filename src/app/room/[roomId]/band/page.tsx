@@ -133,23 +133,10 @@ export default function BandPage() {
     userId: getUserId(),
   };
 
-  const renderGame = () => {
-    switch (instrument) {
-      case 'guitar':
-        return <GuitarGame {...gameProps} />;
-      case 'drums':
-        return <DrumGame {...gameProps} />;
-      case 'keyboard':
-      default:
-        return <KeyboardGame {...gameProps} />;
-    }
-  };
+  // 楽器に応じてゲームコンポーネントを切り替え
+
 
   return (
-    <>
-
-
-      {renderGame()}
-    </>
+    <KeyboardGame {...gameProps} />
   );
 }

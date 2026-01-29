@@ -28,7 +28,6 @@ const SWIPE_THRESHOLD = 50; // スワイプと認識する最小距離(px)
 const SWIPE_TIME_LIMIT = 300; // スワイプと認識する最大時間(ms)
 
 export function useFanService({
-  roomId,
   userId,
   role,
   onSend,

@@ -41,9 +41,10 @@ export function useSyncedAudio(songStartedAt: string | null, audioUrl: string) {
           console.log('[SyncedAudio] Playback started successfully');
           setIsPlaying(true);
           setError(null);
-        } catch (error: any) {
-          console.error('[SyncedAudio] Playback failed:', error);
-          setError(error);
+        } catch (error: unknown) {
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          console.error('[SyncedAudio] Playback failed:', normalizedError);
+          setError(normalizedError);
           setIsPlaying(false);
         }
       } else if (elapsedSeconds >= audio.duration) {
@@ -76,8 +77,14 @@ export function useSyncedAudio(songStartedAt: string | null, audioUrl: string) {
         setIsPlaying(true);
         setError(null);
     };
-    const onPause = () => console.log('[SyncedAudio] Pause event');
-    const onEnded = () => console.log('[SyncedAudio] Ended event');
+    const onPause = () => {
+        console.log('[SyncedAudio] Pause event');
+        setIsPlaying(false);
+    };
+    const onEnded = () => {
+        console.log('[SyncedAudio] Ended event');
+        setIsPlaying(false);
+    };
     const onError = (e: Event) => {
         console.error('[SyncedAudio] Error event:', e);
         setError(new Error('Playback error'));

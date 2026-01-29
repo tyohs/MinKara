@@ -30,12 +30,7 @@ export default function SingerGame({
 
   // ファンサ要求の受信リスナー
   useEffect(() => {
-    console.log('[SingerGame] Setting up fan service listener, roomId:', roomId);
-    
-    if (!roomId) {
-      console.log('[SingerGame] No roomId, skipping listener');
-      return;
-    }
+      if (!roomId) return;
 
     const channel = supabase.channel(`room:${roomId}`);
     
@@ -46,11 +41,10 @@ export default function SingerGame({
         setFanServiceRequest(request);
       })
       .subscribe((status) => {
-        console.log('[SingerGame] Channel subscription status:', status);
+        // subscription status check
       });
 
     return () => {
-      console.log('[SingerGame] Removing channel');
       supabase.removeChannel(channel);
     };
   }, [roomId]);

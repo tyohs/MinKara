@@ -6,6 +6,7 @@ import { SingerGame } from '@/components/game';
 import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
 import { useSyncedAudio } from '@/hooks/useSyncedAudio';
+import styles from '@/components/game/SingerGame.module.css';
 
 export default function SingerPage() {
   const params = useParams();
@@ -42,7 +43,7 @@ export default function SingerPage() {
 
   // 再生ボタンの表示制御
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: NodeJS.Timeout | undefined;
     if (!isPlaying && !showPlayButton) {
       // エラーがある場合は即時表示、そうでなければ3秒待つ
       const delay = error ? 0 : 3000;
@@ -54,7 +55,9 @@ export default function SingerPage() {
     } else if (isPlaying) {
       setShowPlayButton(false);
     }
-    return () => clearTimeout(timer);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [isPlaying, error, showPlayButton]);
 
   // ゲーム開始の準備（status変更に追従）
@@ -72,15 +75,6 @@ export default function SingerPage() {
       router.push(`/room/${roomId}`);
     }, 3000);
   }, [roomId, router, gameEnded]);
-
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
 
   // クリーンアップ
   useEffect(() => {
@@ -123,40 +117,18 @@ export default function SingerPage() {
       
       {/* 自動再生ブロック対策：再生されていない場合にボタンを表示（3秒待っても始まらない場合のみ） */}
       {showPlayButton && !isPlaying && song && (
-        <div style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          zIndex: 10000,
-          background: 'rgba(0, 0, 0, 0.8)',
-          padding: '24px',
-          borderRadius: '16px',
-          textAlign: 'center',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)'
-        }}>
-          <div style={{ fontSize: '24px', marginBottom: '16px' }}>🎵</div>
-          <div style={{ marginBottom: '24px', color: 'white', fontWeight: 'bold' }}>音楽の再生が必要です</div>
+        <div className={styles.playOverlay}>
+          <div className={styles.playIcon}>🎵</div>
+          <div className={styles.playMessage}>音楽の再生が必要です</div>
           <button 
             onClick={handleManualPlay}
-            style={{
-              padding: '12px 32px',
-              fontSize: '18px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #8a2be2, #ff69b4)',
-              border: 'none',
-              borderRadius: '30px',
-              color: 'white',
-              cursor: 'pointer',
-              boxShadow: '0 4px 15px rgba(255, 105, 180, 0.4)'
-            }}
+            className={styles.playButton}
           >
             再生する
           </button>
           
           {error && (
-            <div style={{ marginTop: '12px', color: '#ff6b6b', fontSize: '12px' }}>
+            <div className={styles.errorMessage}>
               Error: {error.message}
             </div>
           )}

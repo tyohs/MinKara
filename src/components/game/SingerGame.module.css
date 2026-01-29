@@ -231,3 +231,53 @@
   0% { background-position: 0% 0%; }
   100% { background-position: 200% 0%; }
 }
+
+/* ========== 手動再生オーバーレイ ========== */
+.playOverlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.playIcon {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.playMessage {
+  margin-bottom: 24px;
+  color: white;
+  font-weight: bold;
+}
+
+.playButton {
+  padding: 12px 32px;
+  font-size: 18px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #8a2be2, #ff69b4);
+  border: none;
+  border-radius: 30px;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.playButton:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.4);
+}
+
+.errorMessage {
+  margin-top: 12px;
+  color: #ff6b6b;
+  font-size: 12px;
+}
