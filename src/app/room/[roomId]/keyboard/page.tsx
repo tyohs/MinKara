@@ -53,7 +53,7 @@ export default function KeyboardPage() {
   }, [chart, session?.song_started_at]);
 
   // Audio sync hook
-  const audioRef = useSyncedAudio(
+  const { audioRef } = useSyncedAudio(
     session?.song_started_at || null, 
     song?.audio_url || ''
   );
