@@ -12,7 +12,7 @@ import {
   VIBRATION_DURATION,
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
-  JudgmentType 
+  JudgmentType
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import styles from './KeyboardGame.module.css';
@@ -21,6 +21,7 @@ interface KeyboardGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
   songDuration?: number; // Duration in seconds
+  bpm?: number;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
@@ -28,6 +29,7 @@ export default function KeyboardGame({
   notes: initialNotes, 
   songStartedAt,
   songDuration,
+  bpm = 120,
   onGameEnd 
 }: KeyboardGameProps) {
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
@@ -203,6 +205,7 @@ export default function KeyboardGame({
         <NoteTrack 
           notes={notes.filter(n => !n.hit)} 
           currentTime={currentTime} 
+          bpm={bpm}
         />
       </div>
 

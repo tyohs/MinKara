@@ -15,22 +15,22 @@ export interface NoteData {
 interface NoteProps {
   note: NoteData;
   currentTime: number;
-  noteSpeed: number;
-  trackHeight: number;
+  visibleDuration: number; // Duration in ms that the note is visible on screen
 }
 
 export default function Note({ 
   note, 
   currentTime, 
-  noteSpeed, 
-  trackHeight,
+  visibleDuration,
 }: NoteProps) {
   // ノーツの位置（0%=上端、100%=下端/判定ライン）
   const progress = useMemo(() => {
     const timeUntilHit = note.time - currentTime;
-    const totalTravelTime = trackHeight / noteSpeed;
-    return timeUntilHit / totalTravelTime;
-  }, [note.time, currentTime, trackHeight, noteSpeed]);
+    // progress = 1 - (timeUntilHit / visibleDuration)
+    // if timeUntilHit == visibleDuration, progress = 0 (top)
+    // if timeUntilHit == 0, progress = 1 (bottom/hit line)
+    return 1 - (timeUntilHit / visibleDuration);
+  }, [note.time, currentTime, visibleDuration]);
 
   // 画面外は描画しない
   if (progress < -0.1 || progress > 1.1) {
