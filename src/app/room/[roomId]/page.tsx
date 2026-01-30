@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
@@ -58,12 +58,12 @@ export default function DenmokuPage() {
     COUNTDOWN_DURATION,
   );
 
-  const loadRoomData = useCallback(async () => {
+  const fetchRoomData = async () => {
+    // 参加者リスト取得
     const participantList = await fetchParticipants(roomId);
     setParticipants(participantList);
-  }, [roomId, setParticipants]);
 
-  const loadReservations = useCallback(async () => {
+    // 予約リスト取得
     const { data } = await supabase
       .from("reservations")
       .select("*")
@@ -73,13 +73,13 @@ export default function DenmokuPage() {
     if (data) {
       setReservations(data);
     }
-  }, [roomId]);
+  };
 
   useEffect(() => {
     setRoomId(roomId);
-    loadRoomData();
-    loadReservations();
-  }, [roomId, setRoomId, loadRoomData, loadReservations]);
+    fetchRoomData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
 
   useEffect(() => {
     if (!myUserId) {
@@ -120,7 +120,9 @@ export default function DenmokuPage() {
           table: "participants",
           filter: `room_id=eq.${roomId}`,
         },
-        () => loadRoomData(),
+        () => {
+          fetchRoomData();
+        },
       )
       .on(
         "postgres_changes",
@@ -130,14 +132,17 @@ export default function DenmokuPage() {
           table: "reservations",
           filter: `room_id=eq.${roomId}`,
         },
-        () => loadReservations(),
+        () => {
+          fetchRoomData();
+        },
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [roomId, loadRoomData, loadReservations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(roomId);
@@ -172,7 +177,7 @@ export default function DenmokuPage() {
     });
 
     if (!error) {
-      await loadReservations();
+      await fetchRoomData();
     }
 
     setShowSongPicker(false);
@@ -182,7 +187,7 @@ export default function DenmokuPage() {
   const handleDeleteReservation = async (reservation: Reservation) => {
     if (reservation.user_id !== myUserId) return;
     await supabase.from("reservations").delete().eq("id", reservation.id);
-    await loadReservations();
+    await fetchRoomData();
   };
 
   const handleReorder = async (newOrder: Reservation[]) => {
@@ -224,7 +229,7 @@ export default function DenmokuPage() {
       {/* Header */}
       <header className="relative z-10 mx-2 mt-2 px-4 py-3 md:mx-4 md:mt-4 md:px-6 md:py-4 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 shadow-lg flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-br from-pink-500 to-orange-400 p-1.5 rounded-lg">
+          <div className="bg-linear-to-br from-pink-500 to-orange-400 p-1.5 rounded-lg">
             <Music className="w-4 h-4 md:w-5 md:h-5 text-white" />
           </div>
           <h1 className="text-lg md:text-xl font-bold text-white tracking-wide hidden sm:block">
@@ -232,7 +237,7 @@ export default function DenmokuPage() {
           </h1>
         </div>
 
-        {/* Room ID Display (Mobile Friendly & Copyable) */}
+        {/* Room ID Display */}
         <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
           <span className="text-gray-400 text-xs md:text-sm">ID:</span>
           <span className="font-mono font-bold text-white text-sm md:text-base tracking-wider">
@@ -280,12 +285,12 @@ export default function DenmokuPage() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex-shrink-0 flex items-center gap-2 p-2 pr-4 bg-white/5 rounded-full lg:rounded-xl border border-white/5"
+                      className="shrink-0 flex items-center gap-2 p-2 pr-4 bg-white/5 rounded-full lg:rounded-xl border border-white/5"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">
+                      <div className="w-8 h-8 rounded-full bg-linear-to-br from-gray-700 to-gray-600 flex items-center justify-center text-white font-bold text-xs shadow-inner">
                         {participant.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-white text-sm font-medium truncate max-w-[100px] lg:max-w-none">
+                      <span className="text-white text-sm font-medium truncate max-w-25 lg:max-w-none">
                         {participant.name}
                       </span>
                       {participant.user_id === myUserId && (
@@ -302,7 +307,7 @@ export default function DenmokuPage() {
 
           {/* Playlist */}
           <div className="lg:col-span-8">
-            <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-xl min-h-[500px] flex flex-col">
+            <div className="bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-xl min-h-125 flex flex-col">
               {/* Playlist Header & Buttons */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 px-1">
                 <div className="flex items-center gap-2">
@@ -310,7 +315,6 @@ export default function DenmokuPage() {
                   <h2 className="text-lg font-bold text-white">Playlist</h2>
                 </div>
 
-                {/* 改善ポイント: ボタンをここに配置 & 文字ラベル付き */}
                 <div className="flex gap-3 w-full sm:w-auto">
                   <button
                     onClick={() => setShowRoulette(true)}
@@ -323,7 +327,7 @@ export default function DenmokuPage() {
                   <button
                     onClick={() => setShowSongPicker(true)}
                     disabled={showCountdownOverlay}
-                    className="flex-[2] sm:flex-initial px-6 py-2.5 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-400 hover:to-orange-400 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50"
+                    className="flex-2 sm:flex-initial px-6 py-2.5 bg-linear-to-r from-pink-500 to-orange-500 hover:from-pink-400 hover:to-orange-400 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-95 disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" />
                     <span>曲を予約</span>
@@ -350,12 +354,12 @@ export default function DenmokuPage() {
                           value={reservation}
                           className={`group relative overflow-hidden flex items-center gap-3 p-3 rounded-xl border backdrop-blur-sm cursor-grab active:cursor-grabbing transition-all ${
                             isFirst
-                              ? "bg-gradient-to-r from-pink-500/20 to-orange-500/20 border-pink-500/30"
+                              ? "bg-linear-to-r from-pink-500/20 to-orange-500/20 border-pink-500/30"
                               : "bg-white/5 hover:bg-white/10 border-white/5"
                           }`}
                         >
                           {/* Playing Indicator */}
-                          <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-black/20">
+                          <div className="w-10 h-10 shrink-0 flex items-center justify-center rounded-lg bg-black/20">
                             {isFirst ? (
                               <div className="flex gap-0.5 items-end h-4">
                                 <motion.div
@@ -395,7 +399,7 @@ export default function DenmokuPage() {
                               {song?.title}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
-                              <span className="truncate max-w-[100px]">
+                              <span className="truncate max-w-25">
                                 {song?.artist}
                               </span>
                               <span className="w-0.5 h-3 bg-gray-600" />
@@ -487,7 +491,7 @@ export default function DenmokuPage() {
   );
 }
 
-// Sub Components (Optimized for UX)
+// Sub Components
 
 function CountdownOverlay({
   song,
@@ -509,7 +513,7 @@ function CountdownOverlay({
         <motion.div
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 1, repeat: Infinity }}
-          className="inline-block p-6 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 mb-8 shadow-[0_0_40px_rgba(255,100,100,0.4)]"
+          className="inline-block p-6 rounded-full bg-linear-to-br from-pink-500 to-orange-500 mb-8 shadow-[0_0_40px_rgba(255,100,100,0.4)]"
         >
           <Music className="w-12 h-12 text-white" />
         </motion.div>
@@ -586,7 +590,7 @@ function SongPickerModal({
               <button
                 key={genre}
                 onClick={() => setSelectedGenre(genre)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   selectedGenre === genre
                     ? "bg-white text-black font-bold"
                     : "bg-white/5 text-gray-400"
@@ -604,7 +608,7 @@ function SongPickerModal({
               onClick={() => onSelect(song)}
               className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors text-left group border-b border-white/5 last:border-0"
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-md group-hover:from-pink-900/50 group-hover:to-orange-900/50 transition-colors">
+              <div className="w-12 h-12 bg-linear-to-br from-gray-800 to-gray-900 rounded-lg flex items-center justify-center shadow-md group-hover:from-pink-900/50 group-hover:to-orange-900/50 transition-colors">
                 <Music className="w-5 h-5 text-gray-500 group-hover:text-pink-400" />
               </div>
               <div className="flex-1 min-w-0">
@@ -673,7 +677,7 @@ function RouletteModal({
       >
         {step === "song" && (
           <>
-            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-pink-900/20 to-orange-900/20">
+            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-linear-to-r from-pink-900/20 to-orange-900/20">
               <div>
                 <h2 className="text-lg font-bold text-white">ルーレット</h2>
                 <p className="text-xs text-orange-300">
@@ -716,12 +720,12 @@ function RouletteModal({
         )}
 
         {(step === "spin" || step === "result") && (
-          <div className="p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
+          <div className="p-8 flex flex-col items-center justify-center min-h-100 text-center">
             <h2 className="text-2xl font-bold text-white mb-8 tracking-widest">
               {spinning ? "抽選中..." : "決定！"}
             </h2>
 
-            <div className="w-40 h-40 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center shadow-[0_0_50px_rgba(255,100,100,0.3)] mb-8 border-4 border-white/10 relative">
+            <div className="w-40 h-40 rounded-full bg-linear-to-br from-pink-500 to-orange-500 flex items-center justify-center shadow-[0_0_50px_rgba(255,100,100,0.3)] mb-8 border-4 border-white/10 relative">
               {spinning ? (
                 <motion.div
                   animate={{ rotate: 360 }}

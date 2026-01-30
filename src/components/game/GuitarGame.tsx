@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import ScoreDisplay from './ScoreDisplay';
 import JudgmentDisplay from './JudgmentDisplay';
 import { NoteData } from './Note';
@@ -11,25 +11,36 @@ import {
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
   JudgmentType,
-  LANE_COUNT
+  LANE_COUNT,
+  NOTE_CONFIG
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import styles from './GuitarGame.module.css';
+import { useFanService } from '@/hooks/useFanService';
+import { FanServiceRequest, FAN_SERVICE_CONFIG } from '@/types/fanService';
+import { supabase } from '@/lib/supabase';
 
 interface GuitarGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
   songDuration?: number;
+  roomId?: string;
+  userId?: string;
+  bpm?: number;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
 // Note travel time from right to judgment line (ms) - Sped up for better rhythmic feel
-const NOTE_TRAVEL_TIME = 1500;
+// Note travel time is no longer fixed, calculated from BPM
+// const NOTE_TRAVEL_TIME = 1500;
 
 export default function GuitarGame({ 
   notes: initialNotes, 
   songStartedAt,
   songDuration,
+  roomId = '',
+  userId = '',
+  bpm = 120,
   onGameEnd 
 }: GuitarGameProps) {
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
@@ -46,6 +57,75 @@ export default function GuitarGame({
 
   // 画面を縦向きでロック（ギターを持つように）
   useScreenLock('portrait');
+
+  // URLからroomIdを補完
+  const [urlRoomId, setUrlRoomId] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !roomId) {
+      const match = window.location.pathname.match(/\/room\/([^\/]+)/);
+      if (match && match[1]) {
+        setUrlRoomId(match[1]);
+      }
+    }
+  }, [roomId]);
+
+  const activeRoomId = roomId || urlRoomId;
+
+  const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
+
+  // ファンサ送信コールバック
+  const handleFanServiceSend = useCallback(async (request: FanServiceRequest) => {
+    if (!activeRoomId) return;
+    
+    try {
+      const channel = supabase.channel(`room:${activeRoomId}`);
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Subscription timeout')), 5000);
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+      
+      await channel.send({
+        type: 'broadcast',
+        event: 'fan_service',
+        payload: request,
+      });
+      
+      supabase.removeChannel(channel);
+      
+      // 送信フィードバック表示
+      const config = FAN_SERVICE_CONFIG[request.type];
+      setFanServiceSent(`${config.icon} ${config.label}`);
+      setTimeout(() => setFanServiceSent(null), 1500);
+    } catch (error) {
+      console.error('[GuitarGame] Failed to send fan service:', error);
+    }
+  }, [activeRoomId]);
+
+  // ファンサフック
+  const {
+    canSend: canSendFanService,
+    cooldownSeconds,
+    handleTouchStart: fanServiceTouchStart,
+    handleTouchEnd: fanServiceTouchEnd,
+  } = useFanService({
+    userId,
+    role: 'guitar',
+    onSend: handleFanServiceSend,
+    enabled: true,
+    initialCooldown: 0,
+  });
+
+  const visibleDuration = useMemo(() => {
+    const msPerBeat = 60000 / bpm;
+    // 2D等速スクロールのため、3D表示（手前で加速する）に比べて体感速度が遅くなるのを補正
+    // 0.6を掛けることで、より速いスクロール速度（Hi-Speed）を実現
+    return msPerBeat * NOTE_CONFIG.beatsVisible * 0.6; 
+  }, [bpm]);
 
   // Calculate lane positions (evenly distributed) - Vertical layout
   const laneWidth = 50;
@@ -178,7 +258,7 @@ export default function GuitarGame({
   // Calculate note position (vertical - top to bottom)
   const getNoteY = (noteTime: number) => {
     const timeDiff = noteTime - currentTime;
-    const progress = timeDiff / NOTE_TRAVEL_TIME;
+    const progress = timeDiff / visibleDuration;
     const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 600;
     // Buttons are bottom: 20px, height: 80px.
     // Adjusted judgment line to be slightly higher (near top edge of buttons)
@@ -188,7 +268,11 @@ export default function GuitarGame({
   };
 
   return (
-    <div className={styles.gameContainer}>
+    <div 
+      className={styles.gameContainer}
+      onTouchStart={fanServiceTouchStart}
+      onTouchEnd={fanServiceTouchEnd}
+    >
       {/* Judgment display (Fixed overlay) */}
       <JudgmentDisplay judgment={lastJudgment} combo={combo} judgmentId={judgmentId} />
 
@@ -208,6 +292,30 @@ export default function GuitarGame({
       <div className={styles.scoreArea}>
         <ScoreDisplay score={score} combo={combo} />
       </div>
+
+      {/* ファンサ送信フィードバック */}
+      {fanServiceSent && (
+        <div className={styles.fanServiceSent}>
+          {fanServiceSent}
+        </div>
+      )}
+
+      {/* ファンサ要求UI */}
+      {canSendFanService ? (
+        <div className={styles.fanServicePopup}>
+          <div className={styles.fanServicePopupIcon}>🎤</div>
+          <div className={styles.fanServicePopupText}>
+            スワイプでファンサ要求！
+          </div>
+          <div className={styles.fanServicePopupDirections}>
+            ↑👋 ↓💕 ←😉 →✌️
+          </div>
+        </div>
+      ) : (
+        <div className={styles.fanServiceCooldown}>
+          ファンサ {cooldownSeconds}秒
+        </div>
+      )}
 
       {/* Main game area */}
       <div className={styles.mainArea}>

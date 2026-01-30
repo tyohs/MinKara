@@ -6,7 +6,6 @@ import { KeyboardGame, GuitarGame, DrumGame } from '@/components/game';
 import { generateDemoChart, getChartForSong } from '@/data/charts';
 import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
-import { useSyncedAudio } from '@/hooks/useSyncedAudio';
 import { submitScore, getUserId } from '@/hooks/useSubmitScore';
 import { getNotesFromPosition } from '@/lib/noteGenerator';
 
@@ -17,6 +16,8 @@ export default function BandPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roomId = params.roomId as string;
+  
+
   
   // 楽器をクエリパラメータから取得（デフォルト: keyboard）
   const instrument = (searchParams.get('instrument') as Instrument) || 'keyboard';
@@ -42,8 +43,9 @@ export default function BandPage() {
     return generateDemoChart();
   }, [session?.song_id]);
 
-  // デモモードの場合のduration（約32秒）
-  const songDuration = song?.duration ?? 32;
+
+  // デモモードの場合のduration（6分間）
+  const songDuration = song?.duration ?? 360;
 
   // 途中参加の場合、経過時間以降のノーツのみを取得
   const activeNotes = useMemo(() => {
@@ -52,17 +54,14 @@ export default function BandPage() {
     if (session?.song_started_at) {
       const startTime = new Date(session.song_started_at).getTime();
       const elapsed = Date.now() - startTime;
-      return getNotesFromPosition(chart.notes, elapsed);
+      const filtered = getNotesFromPosition(chart.notes, elapsed);
+      return filtered;
     }
     
     return chart.notes;
-  }, [chart, session?.song_started_at]);
+  }, [chart, session?.song_started_at, session?.song_id]);
 
-  // Audio sync hook
-  const audioRef = useSyncedAudio(
-    session?.song_started_at || null, 
-    song?.audio_url || ''
-  );
+
 
   // ゲーム開始の準備
   useEffect(() => {
@@ -130,9 +129,23 @@ export default function BandPage() {
     songStartedAt: session?.song_started_at ?? new Date().toISOString(),
     songDuration: songDuration,
     onGameEnd: handleGameEnd,
+    roomId: roomId,
+    userId: getUserId(),
   };
 
+  // 楽器に応じてゲームコンポーネントを切り替え
   const renderGame = () => {
+    // 共通のProps
+    const gameProps = {
+      notes: activeNotes,
+      songStartedAt: session?.song_started_at ?? new Date().toISOString(),
+      songDuration: songDuration,
+      onGameEnd: handleGameEnd,
+      roomId: roomId,
+      userId: getUserId(),
+      bpm: song?.bpm ?? 120,
+    };
+
     switch (instrument) {
       case 'guitar':
         return <GuitarGame {...gameProps} />;
@@ -146,7 +159,6 @@ export default function BandPage() {
 
   return (
     <>
-      {song && <audio ref={audioRef} src={song.audio_url} preload="auto" />}
       {renderGame()}
     </>
   );

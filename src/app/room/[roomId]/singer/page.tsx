@@ -1,128 +1,158 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Mic, Music } from 'lucide-react';
+import { SingerGame } from '@/components/game';
+import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
 import { useSyncedAudio } from '@/hooks/useSyncedAudio';
-import { getSongById } from '@/data/songs';
+import styles from '@/components/game/SingerGame.module.css';
 
 export default function SingerPage() {
   const params = useParams();
   const router = useRouter();
   const roomId = params.roomId as string;
-  
-  const { session } = useGameSession(roomId);
 
-  // Get song data
-  const song = session ? getSongById(session.song_id) : null;
-  
+  const { session } = useGameSession(roomId);
+  const [isReady, setIsReady] = useState(false);
+  const [gameEnded, setGameEnded] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 曲データを取得
+  const song = useMemo(() => {
+    if (session?.song_id) {
+      return getSongById(session.song_id);
+    }
+    return null;
+  }, [session?.song_id]);
+
   // Audio sync hook
-  const audioRef = useSyncedAudio(
-    session?.song_started_at || null, 
+  const { audioRef, isPlaying, error } = useSyncedAudio(
+    session?.song_started_at || null,
     song?.audio_url || ''
   );
 
-  // Logic to handle game end (auto-redirect when audio ends)
+  // 手動再生ハンドラ
+  const handleManualPlay = () => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(console.error);
+    }
+  };
+
+  const [showPlayButton, setShowPlayButton] = useState(false);
+
+  // 再生ボタンの表示制御
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleEnded = () => {
-      // Small delay before going back
-      setTimeout(() => {
-        router.push(`/room/${roomId}`);
-      }, 3000);
+    let timer: NodeJS.Timeout | undefined;
+    if (!isPlaying && !showPlayButton) {
+      // エラーがある場合は即時表示、そうでなければ3秒待つ
+      const delay = error ? 0 : 3000;
+      timer = setTimeout(() => {
+        // まだ再生されていなければボタンを表示
+        // (audioRef.current?.paused もチェックするとより確実だが、isPlayingで代用)
+        setShowPlayButton(true);
+      }, delay);
+    } else if (isPlaying) {
+      setShowPlayButton(false);
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
     };
+  }, [isPlaying, error, showPlayButton]);
 
-    audio.addEventListener('ended', handleEnded);
-    return () => audio.removeEventListener('ended', handleEnded);
-  }, [session?.song_started_at, song?.audio_url, roomId, router]);
+  // ゲーム開始の準備（status変更に追従）
+  useEffect(() => {
+    setIsReady(session?.status === 'playing');
+  }, [session?.status]);
 
-  if (!session || !song) {
+  // ゲーム終了時のコールバック
+  const handleGameEnd = useCallback(() => {
+    if (gameEnded) return;
+    setGameEnded(true);
+
+    // リザルト画面へ遷移（3秒後）
+    timeoutRef.current = setTimeout(() => {
+      router.push(`/room/${roomId}`);
+    }, 3000);
+  }, [roomId, router, gameEnded]);
+
+  // クリーンアップ
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  if (gameEnded) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+      <div className="flex items-center justify-center h-screen bg-[#0a0a0f] text-white">
         <div className="text-center">
-          <p className="text-xl">Loading session...</p>
+          <div className="text-4xl font-bold mb-4">🎤 歌い終わり！</div>
+          <div className="text-lg text-gray-400">
+            ルームに戻ります...
+          </div>
         </div>
       </div>
     );
   }
 
+  // ローディング中または準備中
+  const isLoadingOrWaiting = !isReady || !song;
+
   return (
-    <main className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center text-white bg-black">
-      {/* Background with simple pulse effect based on BPM if we had it synced, generic for now */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-purple-900 opacity-50" />
+    <>
+      {/* 音声要素は常にレンダリングしておく（自動再生の可能性を高めるため） */}
+      {song && (
+        <audio 
+          ref={audioRef} 
+          src={song.audio_url} 
+          preload="auto" 
+          autoPlay 
+          // iOS等での自動再生制限緩和のため
+          playsInline 
+        />
+      )}
       
-      {/* Hidden audio element */}
-      <audio ref={audioRef} src={song.audio_url} preload="auto" />
-
-      {/* Main Content */}
-      <div className="relative z-10 text-center space-y-8 p-6 max-w-4xl w-full">
-        
-        {/* Singer Badge */}
-        <motion.div 
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mx-auto"
-        >
-          <Mic className="w-5 h-5 text-pink-500" />
-          <span className="text-sm font-medium">あなたがシンガーです</span>
-        </motion.div>
-
-        {/* Song Info */}
-        <div className="space-y-4">
-          <motion.h1 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400"
+      {/* 自動再生ブロック対策：再生されていない場合にボタンを表示（3秒待っても始まらない場合のみ） */}
+      {showPlayButton && !isPlaying && song && (
+        <div className={styles.playOverlay}>
+          <div className={styles.playIcon}>🎵</div>
+          <div className={styles.playMessage}>音楽の再生が必要です</div>
+          <button 
+            onClick={handleManualPlay}
+            className={styles.playButton}
           >
-            {song.title}
-          </motion.h1>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl md:text-2xl text-gray-300"
-          >
-            {song.artist}
-          </motion.p>
-        </div>
-
-        {/* Visualizer Placeholder / Disc Animation */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="relative w-64 h-64 mx-auto my-12"
-        >
-          <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
-            className="w-full h-full rounded-full bg-black border-4 border-gray-800 flex items-center justify-center shadow-2xl shadow-purple-500/20"
-          >
-            <div className="absolute inset-0 rounded-full border border-white/10" />
-            <div className="absolute inset-[20%] rounded-full border border-white/5" />
-            <div className="absolute inset-[40%] rounded-full border border-white/5" />
-            <Music className="w-20 h-20 text-gray-700" />
-          </motion.div>
+            再生する
+          </button>
           
-          {/* Pulsing glow */}
-          <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 60 / song.bpm, repeat: Infinity }}
-            className="absolute inset-0 rounded-full bg-purple-500/30 blur-xl -z-10"
-          />
-        </motion.div>
-
-        {/* Lyrics Placeholder */}
-        <div className="h-32 flex items-center justify-center">
-          <p className="text-2xl font-light text-white/80 italic">
-            ♪ 歌詞表示エリア (Coming Soon) ♪
-          </p>
+          {error && (
+            <div className={styles.errorMessage}>
+              Error: {error.message}
+            </div>
+          )}
         </div>
-      </div>
-    </main>
+      )}
+
+      {isLoadingOrWaiting ? (
+        <div className="flex items-center justify-center h-screen bg-[#0a0a0f] text-white">
+          <div className="text-center">
+            <div className="text-2xl font-bold mb-4">準備中...</div>
+            <div className="text-sm text-gray-400">
+              {session?.status === 'countdown' && 'カウントダウン中'}
+              {session?.status === 'role_select' && '役割選択中'}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <SingerGame
+          song={song}
+          songStartedAt={session?.song_started_at ?? null}
+          roomId={roomId}
+          onGameEnd={handleGameEnd}
+        />
+      )}
+    </>
   );
 }

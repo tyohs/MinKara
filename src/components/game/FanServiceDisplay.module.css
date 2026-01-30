@@ -1,0 +1,128 @@
+/* オーバーレイ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  transition: opacity 0.5s ease;
+}
+
+.overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* メインコンテナ */
+.container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 60px;
+  animation: popIn 0.4s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* グロー効果の背景 */
+.glowBackground {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255, 100, 150, 0.8) 0%, rgba(255, 50, 100, 0.4) 40%, transparent 70%);
+  filter: blur(20px);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+/* アイコンラッパー */
+.iconWrapper {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 16px;
+}
+
+/* アイコン */
+.icon {
+  font-size: 80px;
+  filter: drop-shadow(0 0 20px rgba(255, 100, 150, 0.8));
+  animation: bounce 0.6s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* 送信元情報 */
+.senderInfo {
+  position: relative;
+  z-index: 1;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffd700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+/* ラベル */
+.label {
+  position: relative;
+  z-index: 1;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5);
+  margin-bottom: 20px;
+}
+
+/* TAPボタン */
+.tapButton {
+  position: relative;
+  z-index: 1;
+  padding: 12px 40px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #ff6b9d, #c44569);
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 107, 157, 0.5);
+  animation: tapPulse 1s ease-in-out infinite;
+}
+
+@keyframes tapPulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(255, 107, 157, 0.5); }
+  50% { box-shadow: 0 4px 25px rgba(255, 107, 157, 0.8); }
+}
+
+.tapButton:active {
+  transform: scale(0.95);
+}

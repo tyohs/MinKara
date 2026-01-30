@@ -15,6 +15,9 @@ import {
   JudgmentType
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
+import { useFanService } from '@/hooks/useFanService';
+import { FanServiceRequest, FAN_SERVICE_CONFIG } from '@/types/fanService';
+import { supabase } from '@/lib/supabase';
 import styles from './KeyboardGame.module.css';
 
 interface KeyboardGameProps {
@@ -22,6 +25,8 @@ interface KeyboardGameProps {
   songStartedAt: string | null;
   songDuration?: number; // Duration in seconds
   bpm?: number;
+  roomId?: string;
+  userId?: string;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
@@ -30,6 +35,8 @@ export default function KeyboardGame({
   songStartedAt,
   songDuration,
   bpm = 120,
+  roomId = '',
+  userId = '',
   onGameEnd 
 }: KeyboardGameProps) {
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
@@ -41,8 +48,90 @@ export default function KeyboardGame({
   const [judgmentId, setJudgmentId] = useState(0);
   const [isLandscape, setIsLandscape] = useState(true);
   
+  // URLからroomIdを補完（Propsが空の場合）
+  const [urlRoomId, setUrlRoomId] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !roomId) {
+      const match = window.location.pathname.match(/\/room\/([^\/]+)/);
+      if (match && match[1]) {
+        setUrlRoomId(match[1]);
+      }
+    }
+  }, [roomId]);
+
+  const activeRoomId = roomId || urlRoomId;
+
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
+  const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
+  // Supabaseチャンネル接続（常時接続廃止 - 都度送信に戻す）
+
+  // ファンサ送信コールバック
+  const handleFanServiceSend = useCallback(async (request: FanServiceRequest) => {
+    if (!activeRoomId) {
+      console.warn('[KeyboardGame] No activeRoomId available');
+      return;
+    }
+    
+    console.log('[KeyboardGame] Sending fan service:', request);
+    
+    try {
+      const channel = supabase.channel(`room:${activeRoomId}`);
+      
+      // まずsubscribeしてから送信
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Subscription timeout')), 5000);
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+      
+      await channel.send({
+        type: 'broadcast',
+        event: 'fan_service',
+        payload: request,
+      });
+      
+      // 送信後はチャンネルを閉じる
+      supabase.removeChannel(channel);
+      
+      // 送信フィードバック表示
+      const config = FAN_SERVICE_CONFIG[request.type];
+      setFanServiceSent(`${config.icon} ${config.label}`);
+      setTimeout(() => setFanServiceSent(null), 1500);
+    } catch (error) {
+      console.error('[KeyboardGame] Failed to send fan service:', error);
+    }
+  }, [activeRoomId]);
+
+  // propsが変更されたらstateを更新
+  // propsが変更されたらstateを更新
+  useEffect(() => {
+    if (initialNotes.length > 0 && initialNotes.length !== notes.length) {
+      setNotes(initialNotes);
+    }
+  }, [initialNotes]);
+
+
+
+  // ファンサフック
+  const {
+    canSend: canSendFanService,
+    cooldownSeconds,
+    handleTouchStart: fanServiceTouchStart,
+    handleTouchEnd: fanServiceTouchEnd,
+  } = useFanService({
+    userId,
+    role: 'keyboard',
+    onSend: handleFanServiceSend,
+    enabled: true,
+    initialCooldown: 0, // 最初から使用可能
+  });
+
+
 
   // 画面を横向きでロック
   useScreenLock('landscape');
@@ -191,14 +280,44 @@ export default function KeyboardGame({
   }
 
   return (
-    <div className={styles.gameContainer}>
+    <div 
+      className={styles.gameContainer}
+      onTouchStart={fanServiceTouchStart}
+      onTouchEnd={fanServiceTouchEnd}
+    >
       {/* 判定表示（最上位に配置） */}
       <JudgmentDisplay judgment={lastJudgment} combo={combo} judgmentId={judgmentId} />
+
+
+
+      {/* ファンサ送信フィードバック */}
+      {fanServiceSent && (
+        <div className={styles.fanServiceSent}>
+          {fanServiceSent}
+        </div>
+      )}
 
       {/* 上部：スコア表示 */}
       <div className={styles.scoreArea}>
         <ScoreDisplay score={score} combo={combo} />
       </div>
+
+      {/* ファンサ要求UI */}
+      {canSendFanService ? (
+        <div className={styles.fanServicePopup}>
+          <div className={styles.fanServicePopupIcon}>🎤</div>
+          <div className={styles.fanServicePopupText}>
+            スワイプでファンサ要求！
+          </div>
+          <div className={styles.fanServicePopupDirections}>
+            ↑👋 ↓💕 ←😉 →✌️
+          </div>
+        </div>
+      ) : (
+        <div className={styles.fanServiceCooldown}>
+          ファンサ {cooldownSeconds}秒
+        </div>
+      )}
 
       {/* メインエリア（ノーツ落下） */}
       <div className={styles.mainArea}>
