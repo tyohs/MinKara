@@ -124,7 +124,6 @@ export default function KeyboardGame({
     handleTouchStart: fanServiceTouchStart,
     handleTouchEnd: fanServiceTouchEnd,
   } = useFanService({
-    roomId: activeRoomId,
     userId,
     role: 'keyboard',
     onSend: handleFanServiceSend,
