@@ -90,14 +90,12 @@ export default function GuitarGame({
   const [lastJudgment, setLastJudgment] = useState<JudgmentType | null>(null);
   const [judgmentId, setJudgmentId] = useState(0);
   const [activeKeys, setActiveKeys] = useState<Set<number>>(new Set());
-
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
-
   useScreenLock("portrait");
-
   // URLからroomIdを補完
   const [urlRoomId, setUrlRoomId] = useState("");
+
   useEffect(() => {
     if (typeof window !== "undefined" && !roomId) {
       const match = window.location.pathname.match(/\/room\/([^\/]+)/);
@@ -108,13 +106,10 @@ export default function GuitarGame({
   }, [roomId]);
 
   const activeRoomId = roomId || urlRoomId;
-
   const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
-
   const handleFanServiceSend = useCallback(
     async (request: FanServiceRequest) => {
       if (!activeRoomId) return;
-
       try {
         const channel = supabase.channel(`room:${activeRoomId}`);
         await new Promise<void>((resolve, reject) => {
@@ -129,15 +124,12 @@ export default function GuitarGame({
             }
           });
         });
-
         await channel.send({
           type: "broadcast",
           event: "fan_service",
           payload: request,
         });
-
         supabase.removeChannel(channel);
-
         const config = FAN_SERVICE_CONFIG[request.type];
         setFanServiceSent(`${config.icon} ${config.label}`);
         setTimeout(() => setFanServiceSent(null), 1500);
@@ -173,7 +165,6 @@ export default function GuitarGame({
 
   // トラック全体の幅
   const trackWidth = totalLanes * laneWidth + (totalLanes - 1) * laneGap;
-
   useEffect(() => {
     if (!songStartedAt) return;
     const serverStartTime = new Date(songStartedAt).getTime();
@@ -206,12 +197,9 @@ export default function GuitarGame({
           !note.hit &&
           Math.abs(note.time - currentTime) <= TIMING_WINDOWS.good,
       );
-
       if (!targetNote) return;
-
       const timeDiff = Math.abs(targetNote.time - currentTime);
       let judgment: JudgmentType;
-
       if (timeDiff <= TIMING_WINDOWS.perfect) {
         judgment = "perfect";
       } else if (timeDiff <= TIMING_WINDOWS.great) {
@@ -225,11 +213,9 @@ export default function GuitarGame({
           note.id === targetNote.id ? { ...note, hit: true } : note,
         ),
       );
-
       const baseScore = SCORE_VALUES[judgment];
       const comboBonus = 1 + combo / 100;
       const finalScore = Math.floor(baseScore * comboBonus);
-
       setScore((prev) => prev + finalScore);
       setCombo((prev) => {
         const newCombo = prev + 1;
@@ -237,7 +223,6 @@ export default function GuitarGame({
         return newCombo;
       });
       showJudgment(judgment);
-
       if (navigator.vibrate) {
         navigator.vibrate(VIBRATION_DURATION[judgment]);
       }
@@ -266,10 +251,8 @@ export default function GuitarGame({
             : note,
         ),
       );
-
       setCombo(0);
       showJudgment("miss");
-
       if (navigator.vibrate) {
         navigator.vibrate(VIBRATION_DURATION.miss);
       }
@@ -278,7 +261,6 @@ export default function GuitarGame({
 
   useEffect(() => {
     if (!songDuration || gameEndedRef.current) return;
-
     const durationMs = songDuration * 1000;
     if (currentTime >= durationMs) {
       gameEndedRef.current = true;
@@ -319,7 +301,6 @@ export default function GuitarGame({
         </video>
         <div className="absolute inset-0 bg-linear-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
       </div>
-
       {/* 判定エフェクト表示 (オーバーレイ) */}
       <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
         <JudgmentDisplay
@@ -328,19 +309,16 @@ export default function GuitarGame({
           judgmentId={judgmentId}
         />
       </div>
-
       {/* スコア表示エリア */}
       <div className="absolute top-4 left-4 z-40">
         <ScoreDisplay score={score} combo={combo} />
       </div>
-
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
         <div className="absolute top-20 right-4 z-50 bg-pink-500/90 text-white px-4 py-2 rounded-full font-bold shadow-lg animate-bounce">
           {fanServiceSent}
         </div>
       )}
-
       {/* ファンサ要求UI */}
       {canSendFanService ? (
         <div className="absolute bottom-32 right-4 z-50 flex flex-col items-center gap-2 pointer-events-none opacity-80">
@@ -407,11 +385,8 @@ export default function GuitarGame({
               const y = getNoteY(note.time);
               const screenHeight =
                 typeof window !== "undefined" ? window.innerHeight : 600;
-
               if (y < -50 || y > screenHeight + 50) return null;
-
               const color = STRING_COLORS[note.lane % STRING_COLORS.length];
-
               return (
                 <div
                   key={note.id}
@@ -444,7 +419,6 @@ export default function GuitarGame({
             {Array.from({ length: totalLanes }).map((_, index) => {
               const color = STRING_COLORS[index % STRING_COLORS.length];
               const isActive = activeKeys.has(index);
-
               return (
                 <div
                   key={`btn-${index}`}
@@ -486,18 +460,15 @@ export default function GuitarGame({
                     <div
                       className={`w-3/4 h-3/4 rounded-full ${color.bg} opacity-50 shadow-inner ${isActive ? "brightness-150 opacity-100" : ""}`}
                     />
-
                     {/* 弦の延長線 */}
                     <div className="absolute top-0 bottom-0 w-0.5 bg-[#444] pointer-events-none" />
                   </div>
-
                   {/* ヒット時のレーザーエフェクト */}
                   {isActive && (
                     <div
                       className={`absolute bottom-20 w-full h-150 bg-linear-to-t from-${color.bg.replace("bg-", "")}/30 to-transparent pointer-events-none`}
                     />
                   )}
-
                   {/* タッチ判定拡張エリア (透明) */}
                   <div
                     className="absolute -bottom-5 -left-2.5 -right-2.5 -top-25 z-50"

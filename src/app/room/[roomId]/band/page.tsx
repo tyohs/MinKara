@@ -123,15 +123,7 @@ export default function BandPage() {
     );
   }
 
-  // 楽器に応じてゲームコンポーネントを切り替え
-  const gameProps = {
-    notes: activeNotes,
-    songStartedAt: session?.song_started_at ?? new Date().toISOString(),
-    songDuration: songDuration,
-    onGameEnd: handleGameEnd,
-    roomId: roomId,
-    userId: getUserId(),
-  };
+
 
   // 楽器に応じてゲームコンポーネントを切り替え
   const renderGame = () => {

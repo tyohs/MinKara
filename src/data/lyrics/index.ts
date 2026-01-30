@@ -4,6 +4,7 @@ export * from './types';
 import { shiningStarLyrics } from './shining_star';
 import { aogebaToutoshiLyrics } from './aogeba_toutoshi';
 import { burningHeartLyrics } from './burning_heart';
+import { cryingAgainLyrics } from './crying_again';
 import type { SongLyrics } from './types';
 
 // 全歌詞データのマップ
@@ -11,6 +12,7 @@ const lyricsMap: Record<string, SongLyrics> = {
   'song-001': shiningStarLyrics,
   'song-002': aogebaToutoshiLyrics,
   'song-003': burningHeartLyrics,
+  'song-004': cryingAgainLyrics,
 };
 
 /**
