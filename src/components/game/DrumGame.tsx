@@ -11,13 +11,15 @@ import {
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
   JudgmentType,
-  NOTE_CONFIG
+  NOTE_CONFIG,
+  SCROLL_SPEED_2D_CORRECTION
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import styles from './DrumGame.module.css';
+import fanServiceStyles from './FanService.module.css';
 import { useFanService } from '@/hooks/useFanService';
-import { FanServiceRequest, FAN_SERVICE_CONFIG } from '@/types/fanService';
-import { supabase } from '@/lib/supabase';
+import { useRoomIdFromUrl } from '@/hooks/useRoomIdFromUrl';
+import { useFanServiceSender } from '@/hooks/useFanServiceSender';
 
 interface DrumGameProps {
   notes: NoteData[];
@@ -29,7 +31,7 @@ interface DrumGameProps {
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
-// const NOTE_TRAVEL_TIME = 2200;
+
 const HIT_LINE_POSITION = 0.18;
 
 const DRUM_COLORS = [
@@ -80,51 +82,10 @@ export default function DrumGame({
   const visibleNotes = useMemo(() => notes.filter(note => !note.hit), [notes]);
 
   // URLからroomIdを補完
-  const [urlRoomId, setUrlRoomId] = useState('');
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !roomId) {
-      const match = window.location.pathname.match(/\/room\/([^\/]+)/);
-      if (match && match[1]) {
-        setUrlRoomId(match[1]);
-      }
-    }
-  }, [roomId]);
+  const activeRoomId = useRoomIdFromUrl(roomId);
+  const { sendFanService: handleFanServiceSend, feedbackMessage: fanServiceSent } = useFanServiceSender(activeRoomId);
 
-  const activeRoomId = roomId || urlRoomId;
 
-  const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
-
-  // ファンサ送信コールバック
-  const handleFanServiceSend = useCallback(async (request: FanServiceRequest) => {
-    if (!activeRoomId) return;
-    
-    try {
-      const channel = supabase.channel(`room:${activeRoomId}`);
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Subscription timeout')), 5000);
-        channel.subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            clearTimeout(timeout);
-            resolve();
-          }
-        });
-      });
-      
-      await channel.send({
-        type: 'broadcast',
-        event: 'fan_service',
-        payload: request,
-      });
-      
-      supabase.removeChannel(channel);
-      
-      const config = FAN_SERVICE_CONFIG[request.type];
-      setFanServiceSent(`${config.icon} ${config.label}`);
-      setTimeout(() => setFanServiceSent(null), 1500);
-    } catch (error) {
-      console.error('[DrumGame] Failed to send fan service:', error);
-    }
-  }, [activeRoomId]);
 
   // ファンサフック
   const {
@@ -143,7 +104,7 @@ export default function DrumGame({
   const visibleDuration = useMemo(() => {
     const msPerBeat = 60000 / bpm;
     // 2D等速スクロールのため、3D表示（手前で加速する）に比べて体感速度が遅くなるのを補正
-    return msPerBeat * NOTE_CONFIG.beatsVisible * 0.6; 
+    return msPerBeat * NOTE_CONFIG.beatsVisible * SCROLL_SPEED_2D_CORRECTION; 
   }, [bpm]);
 
   useScreenLock('landscape');
@@ -315,24 +276,24 @@ export default function DrumGame({
 
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
-        <div className={styles.fanServiceSent}>
+        <div className={fanServiceStyles.fanServiceSent}>
           {fanServiceSent}
         </div>
       )}
 
       {/* ファンサ要求UI */}
       {canSendFanService ? (
-        <div className={styles.fanServicePopup}>
-          <div className={styles.fanServicePopupIcon}>🎤</div>
-          <div className={styles.fanServicePopupText}>
+        <div className={fanServiceStyles.fanServicePopup}>
+          <div className={fanServiceStyles.fanServicePopupIcon}>🎤</div>
+          <div className={fanServiceStyles.fanServicePopupText}>
             スワイプでファンサ要求！
           </div>
-          <div className={styles.fanServicePopupDirections}>
+          <div className={fanServiceStyles.fanServicePopupDirections}>
             ↑👋 ↓💕 ←😉 →✌️
           </div>
         </div>
       ) : (
-        <div className={styles.fanServiceCooldown}>
+        <div className={fanServiceStyles.fanServiceCooldown}>
           ファンサ {cooldownSeconds}秒
         </div>
       )}

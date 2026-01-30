@@ -16,9 +16,10 @@ import {
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import { useFanService } from '@/hooks/useFanService';
-import { FanServiceRequest, FAN_SERVICE_CONFIG } from '@/types/fanService';
-import { supabase } from '@/lib/supabase';
+import { useRoomIdFromUrl } from '@/hooks/useRoomIdFromUrl';
+import { useFanServiceSender } from '@/hooks/useFanServiceSender';
 import styles from './KeyboardGame.module.css';
+import fanServiceStyles from './FanService.module.css';
 
 interface KeyboardGameProps {
   notes: NoteData[];
@@ -49,63 +50,12 @@ export default function KeyboardGame({
   const [isLandscape, setIsLandscape] = useState(true);
   
   // URLからroomIdを補完（Propsが空の場合）
-  const [urlRoomId, setUrlRoomId] = useState('');
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !roomId) {
-      const match = window.location.pathname.match(/\/room\/([^\/]+)/);
-      if (match && match[1]) {
-        setUrlRoomId(match[1]);
-      }
-    }
-  }, [roomId]);
-
-  const activeRoomId = roomId || urlRoomId;
+  const activeRoomId = useRoomIdFromUrl(roomId);
+  const { sendFanService: handleFanServiceSend, feedbackMessage: fanServiceSent } = useFanServiceSender(activeRoomId);
 
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
-  const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
-  // Supabaseチャンネル接続（常時接続廃止 - 都度送信に戻す）
 
-  // ファンサ送信コールバック
-  const handleFanServiceSend = useCallback(async (request: FanServiceRequest) => {
-    if (!activeRoomId) {
-      console.warn('[KeyboardGame] No activeRoomId available');
-      return;
-    }
-    
-    console.log('[KeyboardGame] Sending fan service:', request);
-    
-    try {
-      const channel = supabase.channel(`room:${activeRoomId}`);
-      
-      // まずsubscribeしてから送信
-      await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Subscription timeout')), 5000);
-        channel.subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            clearTimeout(timeout);
-            resolve();
-          }
-        });
-      });
-      
-      await channel.send({
-        type: 'broadcast',
-        event: 'fan_service',
-        payload: request,
-      });
-      
-      // 送信後はチャンネルを閉じる
-      supabase.removeChannel(channel);
-      
-      // 送信フィードバック表示
-      const config = FAN_SERVICE_CONFIG[request.type];
-      setFanServiceSent(`${config.icon} ${config.label}`);
-      setTimeout(() => setFanServiceSent(null), 1500);
-    } catch (error) {
-      console.error('[KeyboardGame] Failed to send fan service:', error);
-    }
-  }, [activeRoomId]);
 
   // propsが変更されたらstateを更新
   // propsが変更されたらstateを更新
@@ -292,7 +242,7 @@ export default function KeyboardGame({
 
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
-        <div className={styles.fanServiceSent}>
+        <div className={fanServiceStyles.fanServiceSent}>
           {fanServiceSent}
         </div>
       )}
@@ -304,17 +254,17 @@ export default function KeyboardGame({
 
       {/* ファンサ要求UI */}
       {canSendFanService ? (
-        <div className={styles.fanServicePopup}>
-          <div className={styles.fanServicePopupIcon}>🎤</div>
-          <div className={styles.fanServicePopupText}>
+        <div className={fanServiceStyles.fanServicePopup}>
+          <div className={fanServiceStyles.fanServicePopupIcon}>🎤</div>
+          <div className={fanServiceStyles.fanServicePopupText}>
             スワイプでファンサ要求！
           </div>
-          <div className={styles.fanServicePopupDirections}>
+          <div className={fanServiceStyles.fanServicePopupDirections}>
             ↑👋 ↓💕 ←😉 →✌️
           </div>
         </div>
       ) : (
-        <div className={styles.fanServiceCooldown}>
+        <div className={fanServiceStyles.fanServiceCooldown}>
           ファンサ {cooldownSeconds}秒
         </div>
       )}
