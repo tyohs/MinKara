@@ -31,9 +31,18 @@ export const SONGS: Song[] = [
     duration: 312,
     audio_url: '/audio/burning_heart.mp3',
   },
+  {
+    id: 'song-004',
+    title: 'crying_again',
+    artist: '魔王魂、森田交一',
+    bpm: 138,
+    genre: 'Rock',
+    duration: 324,
+    audio_url: '/audio/crying_again.mp3',
+  },
 ];
 
-export const GENRES = ['All', 'Pop', 'Rock', 'Electronic', 'Dance', 'Chill', 'Acoustic', '唱歌'];
+export const GENRES = ['All', 'Pop', 'Rock', 'Electronic', 'Danceシャイニングス', 'Chill', 'Acoustic', '唱歌'];
 
 export function getSongById(id: string): Song | undefined {
   return SONGS.find(song => song.id === id);
