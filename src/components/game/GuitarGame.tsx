@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Flame } from "lucide-react";
-import { Zen_Dots, Noto_Sans_JP } from "next/font/google";
+import { Noto_Sans_JP } from "next/font/google";
 import ScoreDisplay from "./ScoreDisplay";
 import JudgmentDisplay from "./JudgmentDisplay";
 import { NoteData } from "./Note";
@@ -23,10 +21,9 @@ import { FanServiceRequest, FAN_SERVICE_CONFIG } from "@/types/fanService";
 import { supabase } from "@/lib/supabase";
 
 // フォント設定
-const zenDots = Zen_Dots({ weight: "400", subsets: ["latin"] });
 const notoSansJP = Noto_Sans_JP({ weight: ["700"], subsets: ["latin"] });
 
-// 6弦用のカラー定義 (Rock Band / Guitar Hero 風)
+// 6弦用のカラー定義
 const STRING_COLORS = [
   {
     bg: "bg-green-500",
@@ -85,9 +82,6 @@ export default function GuitarGame({
   bpm = 120,
   onGameEnd,
 }: GuitarGameProps) {
-  // ===============================================
-  // ロジック部分は変更なし
-  // ===============================================
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
   const [currentTime, setCurrentTime] = useState(0);
   const [score, setScore] = useState(0);
@@ -301,9 +295,7 @@ export default function GuitarGame({
     return judgmentLineY - progress * judgmentLineY;
   };
 
-  // ===============================================
   // デザイン部分
-  // ===============================================
   return (
     <div
       className={`fixed inset-0 bg-[#0a0a0a] overflow-hidden select-none touch-none ${notoSansJP.className}`}
@@ -325,7 +317,7 @@ export default function GuitarGame({
             type="video/mp4"
           />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
       </div>
 
       {/* 判定エフェクト表示 (オーバーレイ) */}
@@ -380,15 +372,14 @@ export default function GuitarGame({
             }}
           />
 
-          {/* ★修正: 6本の弦の描画位置修正 */}
+          {/* 6本の弦の描画位置 */}
           <div className="absolute inset-0 flex justify-center pointer-events-none">
             {Array.from({ length: totalLanes }).map((_, lane) => (
               <div
                 key={`string-${lane}`}
                 className="absolute h-full bg-[#666] shadow-[0_0_2px_black]"
                 style={{
-                  width: "2px", // 弦の太さ
-                  // 画面中央基準(50%)にしてから、オフセットを調整することで正確に配置
+                  width: "2px",
                   left: "50%",
                   marginLeft:
                     lane * (laneWidth + laneGap) -
@@ -402,14 +393,14 @@ export default function GuitarGame({
 
           {/* 判定ライン (ナット/フレットバー) */}
           <div
-            className="absolute w-full h-[6px] bg-gray-400 border-y border-gray-500 shadow-md z-10"
+            className="absolute w-full h-1.5 bg-gray-400 border-y border-gray-500 shadow-md z-10"
             style={{
               top:
                 typeof window !== "undefined" ? window.innerHeight - 110 : 490,
             }}
           />
 
-          {/* 降ってくるノーツ (丸型に変更) */}
+          {/* 降ってくるノーツ */}
           {notes
             .filter((n) => !n.hit)
             .map((note) => {
@@ -460,7 +451,6 @@ export default function GuitarGame({
                   className="relative flex flex-col items-center pointer-events-auto"
                   style={{ width: laneWidth }}
                 >
-                  {/* 物理ボタン風デザイン */}
                   <div
                     className={`
                       w-full h-20 rounded-b-xl rounded-t-md border-b-4 transition-all duration-75
@@ -498,19 +488,19 @@ export default function GuitarGame({
                     />
 
                     {/* 弦の延長線 */}
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-[#444] pointer-events-none" />
+                    <div className="absolute top-0 bottom-0 w-0.5 bg-[#444] pointer-events-none" />
                   </div>
 
                   {/* ヒット時のレーザーエフェクト */}
                   {isActive && (
                     <div
-                      className={`absolute bottom-[80px] w-full h-[600px] bg-gradient-to-t from-${color.bg.replace("bg-", "")}/30 to-transparent pointer-events-none`}
+                      className={`absolute bottom-20 w-full h-150 bg-linear-to-t from-${color.bg.replace("bg-", "")}/30 to-transparent pointer-events-none`}
                     />
                   )}
 
                   {/* タッチ判定拡張エリア (透明) */}
                   <div
-                    className="absolute bottom-[-20px] left-[-10px] right-[-10px] top-[-100px] z-50"
+                    className="absolute -bottom-5 -left-2.5 -right-2.5 -top-25 z-50"
                     onTouchStart={(e) => {
                       e.preventDefault();
                       setActiveKeys((prev) => new Set(prev).add(index));
