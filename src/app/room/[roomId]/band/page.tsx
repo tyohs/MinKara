@@ -134,9 +134,32 @@ export default function BandPage() {
   };
 
   // 楽器に応じてゲームコンポーネントを切り替え
+  const renderGame = () => {
+    // 共通のProps
+    const gameProps = {
+      notes: activeNotes,
+      songStartedAt: session?.song_started_at ?? new Date().toISOString(),
+      songDuration: songDuration,
+      onGameEnd: handleGameEnd,
+      roomId: roomId,
+      userId: getUserId(),
+      bpm: song?.bpm ?? 120,
+    };
 
+    switch (instrument) {
+      case 'guitar':
+        return <GuitarGame {...gameProps} />;
+      case 'drums':
+        return <DrumGame {...gameProps} />;
+      case 'keyboard':
+      default:
+        return <KeyboardGame {...gameProps} />;
+    }
+  };
 
   return (
-    <KeyboardGame {...gameProps} />
+    <>
+      {renderGame()}
+    </>
   );
 }

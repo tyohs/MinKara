@@ -16,7 +16,6 @@ interface SwipeState {
 }
 
 interface UseFanServiceOptions {
-  roomId: string;
   userId: string;
   role: 'keyboard' | 'guitar' | 'drum';
   onSend?: (request: FanServiceRequest) => void;
