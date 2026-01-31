@@ -43,6 +43,7 @@ export default function DenmokuPage() {
     setParticipants,
     setRoomId,
     reset,
+    isHost,
   } = useRoomStore();
 
   const [copied, setCopied] = useState(false);
@@ -205,11 +206,33 @@ export default function DenmokuPage() {
   };
 
   const handleDeleteReservation = async (reservation: Reservation) => {
-    if (reservation.user_id !== myUserId) return;
+    if (!reservation?.id) {
+      console.warn("invalid reservation id", reservation);
+      return;
+    }
+
+    // ホストは他人の予約も削除可能にする
+    if (reservation.user_id !== myUserId && !isHost) return;
+
     try {
-      await supabase.from("reservations").delete().eq("id", reservation.id);
-    } catch (error) {
-      console.error("Failed to delete reservation:", error);
+      const { error } = await supabase
+        .from("reservations")
+        .delete()
+        .eq("id", reservation.id);
+
+      if (error) {
+        console.error("Failed to delete reservation (supabase):", error);
+        alert("曲の削除に失敗しました。再度お試しください。");
+        await fetchRoomData();
+        return;
+      }
+
+      // 成功したらローカル state を即時更新（optimistic）
+      setReservations((prev) => prev.filter((r) => r.id !== reservation.id));
+    } catch (err) {
+      console.error("Unexpected error deleting reservation:", err);
+      alert("予期せぬエラーが発生しました。");
+      await fetchRoomData();
     }
   };
 
