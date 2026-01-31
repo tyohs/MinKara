@@ -8,6 +8,15 @@ import { FanServiceRequest } from '@/types/fanService';
 import { supabase } from '@/lib/supabase';
 import styles from './SingerGame.module.css';
 
+// --- お邪魔定数 ---
+const OBSTRUCT_IDS = {
+  BLIND: 1, // 歌詞隠し
+} as const;
+
+// 変更: 5000 -> 10000 (10秒)
+const OBSTRUCT_DURATION = 10000;
+// ----------------------
+
 interface SingerGameProps {
   song: Song;
   songStartedAt: string | null;
@@ -36,9 +45,12 @@ export default function SingerGame({
     setLyricsHiddenUntil(Date.now() + 10000);
   };
 
-  // ファンサ要求の受信リスナー
+  // モザイク（歌詞隠し）状態
+  const [isMosaicActive, setIsMosaicActive] = useState(false);
+
+  // イベント受信設定
   useEffect(() => {
-      if (!roomId) return;
+    if (!roomId) return;
 
     const channel = supabase.channel(`room:${roomId}`);
     
@@ -48,9 +60,23 @@ export default function SingerGame({
         const request = payload.payload as FanServiceRequest;
         setFanServiceRequest(request);
       })
-      .subscribe((status) => {
-        // subscription status check
-      });
+      // お邪魔イベント受信
+      .on('broadcast', { event: 'obstruct' }, (payload) => {
+        const { id, action, target } = payload.payload;
+
+        // ターゲット判定: バンド宛てなら無視
+        if (target === 'band') return;
+
+        // 歌詞隠し (ID 1) -> モザイク発動
+        if (id === OBSTRUCT_IDS.BLIND || action === 'hide_lyrics') {
+          setIsMosaicActive(true);
+          
+          setTimeout(() => {
+            setIsMosaicActive(false);
+          }, OBSTRUCT_DURATION);
+        }
+      })
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -152,8 +178,6 @@ export default function SingerGame({
   return (
     <div className={styles.container}>
 
-
-
       {/* ファンサ表示（全画面オーバーレイ） */}
       {fanServiceRequest && (
         <FanServiceDisplay 
@@ -191,6 +215,12 @@ export default function SingerGame({
         ref={lyricsContainerRef}
         onScroll={handleScroll}
         onTouchStart={handleScroll}
+        // モザイク（ぼかし）スタイルの適用
+        style={{
+          filter: isMosaicActive ? 'blur(12px)' : 'none',
+          transition: 'filter 0.3s ease',
+          pointerEvents: isMosaicActive ? 'none' : 'auto',
+        }}
       >
         {lyrics && lyrics.lines.length > 0 ? (
           <div className={`${styles.lyricsContainer} ${isLyricsHidden ? styles.lyricsHidden : ''}`}>
