@@ -13,22 +13,30 @@ const chartCache: Map<string, Chart> = new Map();
 
 /**
  * 曲IDから譜面を取得（自動生成）
+ * difficultyを指定可能に変更（デフォルトはnormal）
  */
-export function getChartForSong(songId: string): Chart | null {
-  if (chartCache.has(songId)) {
-    return chartCache.get(songId)!;
+export function getChartForSong(
+  songId: string, 
+  difficulty: 'easy' | 'normal' | 'hard' = 'normal'
+): Chart | null {
+  
+  // キャッシュキーに難易度を含める（例: "song-001-easy"）
+  const cacheKey = `${songId}-${difficulty}`;
+
+  if (chartCache.has(cacheKey)) {
+    return chartCache.get(cacheKey)!;
   }
 
   const song = SONGS.find(s => s.id === songId);
   if (!song) return null;
 
-  // Specific handling for Shining Star (song-001) or generic generation
+  // generateNotesFromBPM に difficulty を渡す
   const notes = generateNotesFromBPM({
     songId: song.id,
     bpm: song.bpm,
     duration: song.duration,
-    difficulty: 'normal',
-    specialNoteChance: songId === 'song-001' ? 0.15 : 0.1, // Slightly more specials for Shining Star
+    difficulty: difficulty,
+    specialNoteChance: songId === 'song-001' ? 0.15 : 0.1, // Shining Star用調整
   });
 
   const chart: Chart = {
@@ -37,7 +45,7 @@ export function getChartForSong(songId: string): Chart | null {
     notes,
   };
 
-  chartCache.set(songId, chart);
+  chartCache.set(cacheKey, chart);
   return chart;
 }
 

@@ -6,11 +6,11 @@ import { KeyboardGame, GuitarGame, DrumGame } from '@/components/game';
 import { generateDemoChart, getChartForSong } from '@/data/charts';
 import { getSongById } from '@/data/songs';
 import { useGameSession } from '@/hooks/useGameSession';
-import { useSyncedAudio } from '@/hooks/useSyncedAudio';
 import { submitScore, getUserId } from '@/hooks/useSubmitScore';
 import { getNotesFromPosition } from '@/lib/noteGenerator';
 
 type Instrument = 'keyboard' | 'guitar' | 'drums';
+type Difficulty = 'easy' | 'normal' | 'hard';
 
 export default function BandPage() {
   const params = useParams();
@@ -21,6 +21,13 @@ export default function BandPage() {
   // 楽器をクエリパラメータから取得（デフォルト: keyboard）
   const instrument = (searchParams.get('instrument') as Instrument) || 'keyboard';
   
+  // 難易度をクエリパラメータから取得
+  // UI上の「Normal」は 'easy' として渡され、「Hard」は 'hard' として渡される想定
+  const difficultyParam = searchParams.get('difficulty');
+  const difficulty: Difficulty = (difficultyParam === 'easy' || difficultyParam === 'hard') 
+    ? difficultyParam 
+    : 'normal'; // デフォルト
+
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
@@ -33,17 +40,18 @@ export default function BandPage() {
     return null;
   }, [session?.song_id]);
 
-  // 譜面データを取得
+  // 譜面データを取得（難易度を渡す）
   const chart = useMemo(() => {
     if (session?.song_id) {
-      return getChartForSong(session.song_id);
+      // 第2引数に difficulty を追加
+      return getChartForSong(session.song_id, difficulty);
     }
     // デモ用譜面
     return generateDemoChart();
-  }, [session?.song_id]);
+  }, [session?.song_id, difficulty]);
 
-  // デモモードの場合のduration（約32秒）
-  const songDuration = song?.duration ?? 32;
+  // デモモードの場合のduration（6分間）
+  const songDuration = song?.duration ?? 360;
 
   // 途中参加の場合、経過時間以降のノーツのみを取得
   const activeNotes = useMemo(() => {
@@ -52,17 +60,12 @@ export default function BandPage() {
     if (session?.song_started_at) {
       const startTime = new Date(session.song_started_at).getTime();
       const elapsed = Date.now() - startTime;
-      return getNotesFromPosition(chart.notes, elapsed);
+      const filtered = getNotesFromPosition(chart.notes, elapsed);
+      return filtered;
     }
     
     return chart.notes;
-  }, [chart, session?.song_started_at]);
-
-  // Audio sync hook
-  const audioRef = useSyncedAudio(
-    session?.song_started_at || null, 
-    song?.audio_url || ''
-  );
+  }, [chart, session?.song_started_at, session?.song_id]);
 
   // ゲーム開始の準備
   useEffect(() => {
@@ -125,14 +128,18 @@ export default function BandPage() {
   }
 
   // 楽器に応じてゲームコンポーネントを切り替え
-  const gameProps = {
-    notes: activeNotes,
-    songStartedAt: session?.song_started_at ?? new Date().toISOString(),
-    songDuration: songDuration,
-    onGameEnd: handleGameEnd,
-  };
-
   const renderGame = () => {
+    // 共通のProps
+    const gameProps = {
+      notes: activeNotes,
+      songStartedAt: session?.song_started_at ?? new Date().toISOString(),
+      songDuration: songDuration,
+      onGameEnd: handleGameEnd,
+      roomId: roomId,
+      userId: getUserId(),
+      bpm: song?.bpm ?? 120,
+    };
+
     switch (instrument) {
       case 'guitar':
         return <GuitarGame {...gameProps} />;
@@ -146,7 +153,6 @@ export default function BandPage() {
 
   return (
     <>
-      {song && <audio ref={audioRef} src={song.audio_url} preload="auto" />}
       {renderGame()}
     </>
   );

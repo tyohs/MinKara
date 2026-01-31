@@ -10,6 +10,7 @@ export interface NoteData {
   time: number;
   type: 'normal' | 'special';
   hit?: boolean;
+  isObstruction?: boolean; // 追加: お邪魔ノーツかどうかのフラグ
 }
 
 interface NoteProps {
