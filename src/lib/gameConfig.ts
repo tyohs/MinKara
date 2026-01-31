@@ -37,7 +37,7 @@ export const TIMING_WINDOWS = {
   good: 150,
 } as const;
 
-export type JudgmentType = 'perfect' | 'great' | 'good' | 'miss';
+export type JudgmentType = 'perfect' | 'great' | 'good' | 'miss' | 'bad';
 
 // ========================================
 // スコア設定
@@ -47,6 +47,7 @@ export const SCORE_VALUES: Record<JudgmentType, number> = {
   great: 75,
   good: 50,
   miss: 0,
+  bad: -500, // ペナルティ
 };
 
 // ========================================
@@ -57,6 +58,7 @@ export const JUDGMENT_CONFIG: Record<JudgmentType, { text: string; color: string
   great: { text: 'GREAT', color: '#F59E0B' },
   good: { text: 'GOOD', color: '#38BDF8' },
   miss: { text: 'MISS', color: '#EF4444' },
+  bad: { text: 'BAD', color: '#881337' },
 };
 
 // ========================================
@@ -85,6 +87,7 @@ export const VIBRATION_DURATION: Record<JudgmentType, number> = {
   great: 20,
   good: 10,
   miss: 100,
+  bad: 100,
 };
 
 // ========================================
@@ -116,4 +119,17 @@ export const OBSTRUCT_IDS = {
   STEALTH: 4, // ノーツ隠し -> ステルス
   CONFETTI: 5, // 紙吹雪
 } as const;
+
+export type ObstructId = typeof OBSTRUCT_IDS[keyof typeof OBSTRUCT_IDS];
+
+// ========================================
+// お邪魔の効果時間 (ms)
+// ========================================
+export const OBSTRUCT_DURATIONS: Record<ObstructId, number> = {
+  [OBSTRUCT_IDS.BLIND]: 5000,
+  [OBSTRUCT_IDS.SHAKE]: 5000,
+  [OBSTRUCT_IDS.FAKE]: 3000,    // ニセノーツは3秒
+  [OBSTRUCT_IDS.STEALTH]: 3000, // ステルスは3秒
+  [OBSTRUCT_IDS.CONFETTI]: 5000,
+};
 

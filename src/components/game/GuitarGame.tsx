@@ -81,15 +81,7 @@ interface FakeNote extends NoteData {
   isFake: true;
 }
 
-// 紙吹雪の初期データ生成
-const CONFETTI_PARTICLES = Array.from({ length: 20 }).map((_, i) => ({
-  id: i,
-  x: Math.random() * 100, // 0-100vw
-  duration: 2 + Math.random() * 2,
-  color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][
-    Math.floor(Math.random() * 4)
-  ],
-}));
+
 
 export default function GuitarGame({
   notes: initialNotes,
@@ -133,14 +125,8 @@ export default function GuitarGame({
   const activeRoomId = roomId || urlRoomId;
 
   // --- お邪魔機能ロジック ---
-  const { activeObstructs } = useGameObstruction(activeRoomId, 'guitar');
+  const { activeObstructs } = useGameObstruction(activeRoomId);
   const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
-
-  // triggerObstructはHook内部で完結しているため、GuitarGame側で個別に定義する必要はなくなるが、
-  // もしデバッグ用などで使っていた場合はHookから返されたものを使う。
-  // ここではfake note生成ロジックがactiveObstructsに依存しているだけなのでそのまま使える。
-
-  // ニセノーツ生成ロジック (ID 3)
 
   // ニセノーツ生成ロジック (ID 3)
   useEffect(() => {
@@ -164,12 +150,13 @@ export default function GuitarGame({
     return () => clearInterval(interval);
   }, [activeObstructs]);
 
-  // 古いニセノーツの掃除
+  // 古いニセノーツの掃除 (自動消滅、ミスにはならない)
   useEffect(() => {
     if (fakeNotes.length > 0) {
       setFakeNotes((prev) => prev.filter((n) => n.time > currentTime - 200));
     }
-  }, [currentTime, fakeNotes.length]);
+  }, [currentTime, fakeNotes]); // 依存配列修正
+
 
   // --- ファンサ機能 ---
   const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
@@ -236,6 +223,16 @@ export default function GuitarGame({
     [songStartedAt]
   );
 
+  // 紙吹雪パーティクル (再レンダリングごとの生成を避ける)
+  const confettiParticles = useMemo(() => 
+    Array.from({ length: 12 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      duration: 2 + Math.random() * 2,
+      color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][Math.floor(Math.random() * 4)],
+    })), 
+  []);
+
   // ゲームループ (requestAnimationFrameを使用)
   useEffect(() => {
     if (startTimestamp === null) return;
@@ -270,13 +267,31 @@ export default function GuitarGame({
 
   const handleKeyPress = useCallback(
     (lane: number) => {
-      const targetNote = notes.find(
+      // 判定対象のノーツを探す（通常ノーツ + ニセノーツ）
+      const targetNote = [...notes, ...fakeNotes].find(
         (note) =>
           note.lane === lane &&
           !note.hit &&
           Math.abs(note.time - currentTime) <= TIMING_WINDOWS.good,
       );
       if (!targetNote) return;
+
+      // ニセノーツを叩いた場合：BAD判定 (ペナルティ)
+      if ('isFake' in targetNote && targetNote.isFake) {
+        setFakeNotes(prev => prev.map(note => 
+          note.id === targetNote.id ? { ...note, hit: true } : note
+        ));
+        
+        setScore(prev => prev + SCORE_VALUES.bad);
+        setCombo(0); // コンボ中断
+        showJudgment('bad');
+        
+        if (navigator.vibrate) {
+          navigator.vibrate(VIBRATION_DURATION.bad);
+        }
+        return;
+      }
+
       const timeDiff = Math.abs(targetNote.time - currentTime);
       let judgment: JudgmentType;
       if (timeDiff <= TIMING_WINDOWS.perfect) {
@@ -306,7 +321,7 @@ export default function GuitarGame({
         navigator.vibrate(VIBRATION_DURATION[judgment]);
       }
     },
-    [notes, currentTime, combo, showJudgment],
+    [notes, fakeNotes, currentTime, combo, showJudgment],
   );
 
   useEffect(() => {
@@ -318,6 +333,7 @@ export default function GuitarGame({
   }, []);
 
   useEffect(() => {
+    // ミス判定 (通常のノーツのみ対象)
     const missedNotes = notes.filter(
       (note) => !note.hit && note.time < currentTime - TIMING_WINDOWS.good - 50,
     );
@@ -384,7 +400,7 @@ export default function GuitarGame({
       {/* お邪魔エフェクト：紙吹雪 (ID 5) */}
       {activeObstructs.has(OBSTRUCT_IDS.CONFETTI) && (
         <div className="absolute inset-0 z-60 pointer-events-none overflow-hidden">
-          {CONFETTI_PARTICLES.map((particle) => (
+          {confettiParticles.map((particle) => (
             <motion.div
               key={particle.id}
               className="absolute w-4 h-4 bg-white rounded-full opacity-70"

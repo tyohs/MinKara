@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import NoteTrack from './NoteTrack';
 import PianoKeys from './PianoKeys';
@@ -31,15 +31,7 @@ interface FakeNote extends NoteData {
   isFake: true;
 }
 
-// 紙吹雪の初期データ生成
-const CONFETTI_PARTICLES = Array.from({ length: 20 }).map((_, i) => ({
-  id: i,
-  x: Math.random() * 100, // 0-100vw
-  duration: 2 + Math.random() * 2,
-  color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][
-    Math.floor(Math.random() * 4)
-  ],
-}));
+
 
 interface KeyboardGameProps {
   notes: NoteData[];
@@ -72,6 +64,10 @@ export default function KeyboardGame({
   // URLからroomIdを補完（Propsが空の場合）
   const activeRoomId = useRoomIdFromUrl(roomId);
   const { sendFanService: handleFanServiceSend, feedbackMessage: fanServiceSent } = useFanServiceSender(activeRoomId);
+
+  // --- お邪魔機能ロジック ---
+  const { activeObstructs } = useGameObstruction(activeRoomId);
+  const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
 
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
@@ -138,6 +134,18 @@ export default function KeyboardGame({
     return () => clearInterval(interval);
   }, [songStartedAt]);
 
+
+
+  // 紙吹雪パーティクル (再レンダリングごとの生成を避ける)
+  const confettiParticles = useMemo(() => 
+    Array.from({ length: 12 }).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      duration: 2 + Math.random() * 2,
+      color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][Math.floor(Math.random() * 4)],
+    })), 
+  []);
+
   const showJudgment = useCallback((judgment: JudgmentType) => {
     if (judgmentTimeoutRef.current) {
       clearTimeout(judgmentTimeoutRef.current);
@@ -150,13 +158,30 @@ export default function KeyboardGame({
   }, []);
 
   const handleKeyPress = useCallback((lane: number) => {
-    const targetNote = notes.find(note => 
+    // 判定対象のノーツを探す（通常ノーツ + ニセノーツ）
+    const targetNote = [...notes, ...fakeNotes].find(note => 
       note.lane === lane && 
       !note.hit &&
       Math.abs(note.time - currentTime) <= TIMING_WINDOWS.good
     );
 
     if (!targetNote) return;
+
+    // ニセノーツを叩いた場合：BAD判定 (ペナルティ)
+    if ('isFake' in targetNote && targetNote.isFake) {
+      setFakeNotes(prev => prev.map(note => 
+        note.id === targetNote.id ? { ...note, hit: true } : note
+      ));
+      
+      setScore(prev => prev + SCORE_VALUES.bad);
+      setCombo(0); // コンボ中断
+      showJudgment('bad');
+      
+      if (navigator.vibrate) {
+        navigator.vibrate(VIBRATION_DURATION.bad);
+      }
+      return;
+    }
 
     const timeDiff = Math.abs(targetNote.time - currentTime);
     let judgment: JudgmentType;
@@ -188,7 +213,7 @@ export default function KeyboardGame({
     if (navigator.vibrate) {
       navigator.vibrate(VIBRATION_DURATION[judgment]);
     }
-  }, [notes, currentTime, combo, showJudgment]);
+  }, [notes, fakeNotes, currentTime, combo, showJudgment]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -199,7 +224,7 @@ export default function KeyboardGame({
     };
   }, []);
 
-  // ミス判定
+  // ミス判定 (通常のノーツのみ対象)
   useEffect(() => {
     const missedNotes = notes.filter(note => 
       !note.hit && 
@@ -249,10 +274,6 @@ export default function KeyboardGame({
     );
   }
 
-  // --- お邪魔機能ロジック ---
-  const { activeObstructs } = useGameObstruction(activeRoomId);
-  const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
-
   // currentTimeをRefでも保持する（setInterval内で参照するため）
   const currentTimeRef = useRef(0);
   useEffect(() => {
@@ -281,14 +302,15 @@ export default function KeyboardGame({
     }, 200); // 0.2秒ごとに生成
 
     return () => clearInterval(interval);
-  }, [activeObstructs]); // currentTimeRefを使うのでcurrentTimeへの依存なし
+  }, [activeObstructs]); // currentTimeはref経由で参照し、依存配列には含めずintervalの再生成をactiveObstructs変化時のみに限定している
 
-  // 古いニセノーツの掃除
+  // 古いニセノーツの掃除 (自動消滅、ミスにはならない)
   useEffect(() => {
     if (fakeNotes.length > 0) {
+      // 画面外に出たニセノーツは静かに消す
       setFakeNotes(prev => prev.filter(n => n.time > currentTime - 200));
     }
-  }, [currentTime, fakeNotes.length]);
+  }, [currentTime, fakeNotes]); // 依存配列修正: fakeNotes全体を含める
 
 
   return (
@@ -300,7 +322,7 @@ export default function KeyboardGame({
       {/* お邪魔エフェクト：紙吹雪 (ID 5) */}
       {activeObstructs.has(OBSTRUCT_IDS.CONFETTI) && (
         <div className="absolute inset-0 z-60 pointer-events-none overflow-hidden">
-          {CONFETTI_PARTICLES.map((particle) => (
+          {confettiParticles.map((particle) => (
             <motion.div
               key={particle.id}
               className="absolute w-4 h-4 bg-white rounded-full opacity-70"
