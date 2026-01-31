@@ -23,9 +23,27 @@ export default function JoinRoomPage() {
     }
   }, [myUserId, setMyUserId]);
 
+  // 全角→半角、不要文字削除
+  const sanitizeRoomCode = (input: string) => {
+    return input
+      .replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0)) // 全角数字 → 半角
+      .replace(/[Ａ-Ｚａ-ｚ]/g, (s) =>
+        String.fromCharCode(s.charCodeAt(0) - 0xfee0),
+      ) // 全角英字 → 半角
+      .replace(/[^a-zA-Z0-9]/g, "") // 英数字以外（空白、記号）を削除
+      .toUpperCase(); // 大文字化
+  };
+
   const handleJoin = async () => {
-    if (!myUserId || !roomCode.trim()) {
+    const cleanCode = sanitizeRoomCode(roomCode);
+
+    if (!myUserId || !cleanCode) {
       setError("ルームコードを入力してください");
+      return;
+    }
+
+    if (cleanCode.length !== 6) {
+      setError("ルームコードは6桁です");
       return;
     }
 
@@ -33,20 +51,18 @@ export default function JoinRoomPage() {
     setError(null);
 
     const displayName = name.trim() || "ゲスト";
-    const normalizedCode = roomCode.trim().toUpperCase();
 
-    const success = await joinRoom(normalizedCode, myUserId, displayName);
+    const success = await joinRoom(cleanCode, myUserId, displayName);
 
     if (success) {
-      setRoomId(normalizedCode);
+      setRoomId(cleanCode);
       setIsHost(false);
       setMyName(displayName);
-      router.push(`/room/${normalizedCode}`);
+      router.push(`/room/${cleanCode}`);
     } else {
       setError("ルームが見つかりません");
+      setIsJoining(false); // 失敗時のみローディング解除
     }
-
-    setIsJoining(false);
   };
 
   return (

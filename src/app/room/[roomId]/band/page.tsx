@@ -18,6 +18,8 @@ export default function BandPage() {
   const searchParams = useSearchParams();
   const roomId = params.roomId as string;
   
+
+  
   // 楽器をクエリパラメータから取得（デフォルト: keyboard）
   const instrument = (searchParams.get('instrument') as Instrument) || 'keyboard';
   
@@ -66,6 +68,8 @@ export default function BandPage() {
     
     return chart.notes;
   }, [chart, session?.song_started_at, session?.song_id]);
+
+
 
   // ゲーム開始の準備
   useEffect(() => {
@@ -126,6 +130,8 @@ export default function BandPage() {
       </div>
     );
   }
+
+
 
   // 楽器に応じてゲームコンポーネントを切り替え
   const renderGame = () => {

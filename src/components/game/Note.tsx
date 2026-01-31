@@ -45,11 +45,11 @@ export default function Note({
   const laneWidth = 100 / LANE_COUNT;
   const leftPosition = note.lane * laneWidth + laneWidth / 2;
 
-  // 3D空間内での位置
-  const topPercent = (1 - progress) * 100;
+  // 3D空間内での位置（progress=0で上端、progress=1で下端/判定ライン）
+  const topPercent = progress * 100;
 
-  // スケール（遠いほど小さく）
-  const scale = NOTE_CONFIG.minScale + (1 - progress) * (NOTE_CONFIG.maxScale - NOTE_CONFIG.minScale);
+  // スケール（上端=遠いほど小さく、下端=近いほど大きく）
+  const scale = NOTE_CONFIG.minScale + progress * (NOTE_CONFIG.maxScale - NOTE_CONFIG.minScale);
 
   return (
     <div

@@ -1,0 +1,283 @@
+/* SingerGame - シンガー画面のスタイル（リッチな背景・スクロール対応） */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: linear-gradient(180deg, #0a0a1a 0%, #1a1a3e 50%, #0f0f23 100%);
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ========== 背景動画 ========== */
+.backgroundVideo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.videoOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ========== ヘッダー ========== */
+.header {
+  flex-shrink: 0;
+  padding: 1.5rem 1.5rem 1rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(138, 43, 226, 0.25) 0%, transparent 100%);
+  position: relative;
+  z-index: 1;
+}
+
+.roleIndicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.micIcon {
+  font-size: 1.2rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.15); }
+}
+
+.roleText {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.05em;
+}
+
+.songTitle {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0;
+  background: linear-gradient(90deg, #fff, #e0b0ff, #fff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+.artistName {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.25rem 0 0;
+}
+
+/* ========== 歌詞エリア ========== */
+.lyricsArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.5rem;
+  position: relative;
+  z-index: 1;
+  /* スクロールバーをカスタマイズ */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(138, 43, 226, 0.5) transparent;
+}
+
+.lyricsArea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.lyricsArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lyricsArea::-webkit-scrollbar-thumb {
+  background: rgba(138, 43, 226, 0.5);
+  border-radius: 2px;
+}
+
+.lyricsContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  width: 100%;
+}
+
+/* スペーサー（最初と最後の歌詞を中央に配置するため） */
+.lyricsSpacer {
+  height: 30vh;
+  flex-shrink: 0;
+}
+
+.lyricLine {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  word-break: keep-all;
+  max-width: 90%;
+}
+
+.currentLyric {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(138, 43, 226, 0.6), rgba(75, 0, 130, 0.6));
+  box-shadow: 
+    0 0 30px rgba(138, 43, 226, 0.5),
+    0 0 60px rgba(138, 43, 226, 0.3),
+    inset 0 0 20px rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pastLyric {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.35);
+  transform: scale(0.95);
+}
+
+.futureLyric {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ========== 歌詞がない場合 ========== */
+.noLyrics {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 3rem 0;
+}
+
+.musicNote {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: 1rem;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.noLyricsHint {
+  font-size: 0.9rem;
+  opacity: 0.6;
+  margin-top: 0.5rem;
+}
+
+/* ========== フッター ========== */
+.footer {
+  flex-shrink: 0;
+  padding: 1rem 1.5rem 1.5rem;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+  position: relative;
+  z-index: 1;
+}
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.timeDisplay {
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 3rem;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #8a2be2, #da70d6, #8a2be2);
+  background-size: 200% 100%;
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  animation: progressShimmer 2s linear infinite;
+}
+
+@keyframes progressShimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+/* ========== 手動再生オーバーレイ ========== */
+.playOverlay {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.playIcon {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+
+.playMessage {
+  margin-bottom: 24px;
+  color: white;
+  font-weight: bold;
+}
+
+.playButton {
+  padding: 12px 32px;
+  font-size: 18px;
+  font-weight: bold;
+  background: linear-gradient(135deg, #8a2be2, #ff69b4);
+  border: none;
+  border-radius: 30px;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 105, 180, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.playButton:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 8px rgba(255, 105, 180, 0.4);
+}
+
+.errorMessage {
+  margin-top: 12px;
+  color: #ff6b6b;
+  font-size: 12px;
+}

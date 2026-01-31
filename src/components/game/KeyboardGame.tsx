@@ -15,13 +15,19 @@ import {
   JudgmentType
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
+import { useFanService } from '@/hooks/useFanService';
+import { useRoomIdFromUrl } from '@/hooks/useRoomIdFromUrl';
+import { useFanServiceSender } from '@/hooks/useFanServiceSender';
 import styles from './KeyboardGame.module.css';
+import fanServiceStyles from './FanService.module.css';
 
 interface KeyboardGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
   songDuration?: number; // Duration in seconds
   bpm?: number;
+  roomId?: string;
+  userId?: string;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
 
@@ -30,6 +36,8 @@ export default function KeyboardGame({
   songStartedAt,
   songDuration,
   bpm = 120,
+  roomId = '',
+  userId = '',
   onGameEnd 
 }: KeyboardGameProps) {
   const [notes, setNotes] = useState<NoteData[]>(initialNotes);
@@ -41,8 +49,39 @@ export default function KeyboardGame({
   const [judgmentId, setJudgmentId] = useState(0);
   const [isLandscape, setIsLandscape] = useState(true);
   
+  // URLからroomIdを補完（Propsが空の場合）
+  const activeRoomId = useRoomIdFromUrl(roomId);
+  const { sendFanService: handleFanServiceSend, feedbackMessage: fanServiceSent } = useFanServiceSender(activeRoomId);
+
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
+
+
+  // propsが変更されたらstateを更新
+  // propsが変更されたらstateを更新
+  useEffect(() => {
+    if (initialNotes.length > 0 && initialNotes.length !== notes.length) {
+      setNotes(initialNotes);
+    }
+  }, [initialNotes]);
+
+
+
+  // ファンサフック
+  const {
+    canSend: canSendFanService,
+    cooldownSeconds,
+    handleTouchStart: fanServiceTouchStart,
+    handleTouchEnd: fanServiceTouchEnd,
+  } = useFanService({
+    userId,
+    role: 'keyboard',
+    onSend: handleFanServiceSend,
+    enabled: true,
+    initialCooldown: 0, // 最初から使用可能
+  });
+
+
 
   // 画面を横向きでロック
   useScreenLock('landscape');
@@ -191,14 +230,44 @@ export default function KeyboardGame({
   }
 
   return (
-    <div className={styles.gameContainer}>
+    <div 
+      className={styles.gameContainer}
+      onTouchStart={fanServiceTouchStart}
+      onTouchEnd={fanServiceTouchEnd}
+    >
       {/* 判定表示（最上位に配置） */}
       <JudgmentDisplay judgment={lastJudgment} combo={combo} judgmentId={judgmentId} />
+
+
+
+      {/* ファンサ送信フィードバック */}
+      {fanServiceSent && (
+        <div className={fanServiceStyles.fanServiceSent}>
+          {fanServiceSent}
+        </div>
+      )}
 
       {/* 上部：スコア表示 */}
       <div className={styles.scoreArea}>
         <ScoreDisplay score={score} combo={combo} />
       </div>
+
+      {/* ファンサ要求UI */}
+      {canSendFanService ? (
+        <div className={fanServiceStyles.fanServicePopup}>
+          <div className={fanServiceStyles.fanServicePopupIcon}>🎤</div>
+          <div className={fanServiceStyles.fanServicePopupText}>
+            スワイプでファンサ要求！
+          </div>
+          <div className={fanServiceStyles.fanServicePopupDirections}>
+            ↑👋 ↓💕 ←😉 →✌️
+          </div>
+        </div>
+      ) : (
+        <div className={fanServiceStyles.fanServiceCooldown}>
+          ファンサ {cooldownSeconds}秒
+        </div>
+      )}
 
       {/* メインエリア（ノーツ落下） */}
       <div className={styles.mainArea}>

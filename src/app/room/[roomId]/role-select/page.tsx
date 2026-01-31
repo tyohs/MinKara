@@ -39,6 +39,7 @@ const SOUND_EFFECTS = {
   ojama: "/soundEffect/roleSelect/roleSelect-ojama.mp3",
 } as const;
 
+// 楽器データの型定義
 type InstrumentData = {
   id: InstrumentType;
   name: string;
@@ -141,6 +142,7 @@ export default function RoleSelectPage() {
     fetchParticipants(roomId).then(setParticipants);
   }, [roomId, setParticipants]);
 
+  // ★修正2: useRef を使って判定するように変更
   useEffect(() => {
     if (
       session &&
