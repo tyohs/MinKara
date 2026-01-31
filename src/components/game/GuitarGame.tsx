@@ -142,6 +142,7 @@ export default function GuitarGame({
   const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
 
   const triggerObstruct = useCallback((id: number) => {
+    console.log("[GuitarGame] Triggering obstruct ID:", id); // デバッグ用ログ
     setActiveObstructs((prev) => {
       const next = new Set(prev);
       next.add(id);
@@ -162,13 +163,29 @@ export default function GuitarGame({
   useEffect(() => {
     if (!activeRoomId) return;
 
+    console.log("[GuitarGame] Subscribing to room:", activeRoomId);
+
     const channel = supabase.channel(`room:${activeRoomId}`);
     channel
       .on("broadcast", { event: "obstruct" }, (payload) => {
-        const { id } = payload.payload as { id: number };
+        // payloadの型安全性を確保しつつ展開
+        const data = payload.payload as { id: number; target?: string };
+        console.log("[GuitarGame] Received obstruct event:", data); // デバッグログ
+        const { id, target } = data;
+
+        // ターゲット判定: "singer"宛ての攻撃は無視する
+        if (target === "singer") {
+          console.log("[GuitarGame] Ignoring obstruct (target is singer)");
+          return;
+        }
+
         triggerObstruct(id);
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("[GuitarGame] Ready to receive obstructs");
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -189,7 +206,7 @@ export default function GuitarGame({
         time: currentTime + 2000,
         hit: false,
         isFake: true,
-        type: "normal", // ★ここを追加しました（必須プロパティ）
+        type: "normal",
       };
       setFakeNotes((prev) => [...prev, newFakeNote]);
     }, 200);
@@ -554,7 +571,14 @@ export default function GuitarGame({
                 <div className="w-3 h-3 bg-[#222] rounded-full shadow-inner" />
                 <div className="absolute top-1 left-2 w-3 h-2 bg-white/50 rounded-full blur-[1px]" />
                 {isFake && (
-                  <div className="absolute text-xs font-bold text-black">?</div>
+                  <div
+                    className="absolute text-2xl select-none"
+                    style={{
+                      filter: "drop-shadow(0 0 2px rgba(0,0,0,0.5))",
+                    }}
+                  >
+                    👿
+                  </div>
                 )}
               </motion.div>
             );
@@ -616,20 +640,16 @@ export default function GuitarGame({
                       });
                     }}
                   >
-                    {/* ボタンのカラーインジケーター */}
                     <div
                       className={`w-3/4 h-3/4 rounded-full ${color.bg} opacity-50 shadow-inner ${isActive ? "brightness-150 opacity-100" : ""}`}
                     />
-                    {/* 弦の延長線 */}
                     <div className="absolute top-0 bottom-0 w-0.5 bg-[#444] pointer-events-none" />
                   </div>
-                  {/* ヒット時のレーザーエフェクト */}
                   {isActive && (
                     <div
                       className={`absolute bottom-20 w-full h-150 bg-linear-to-t from-${color.bg.replace("bg-", "")}/30 to-transparent pointer-events-none`}
                     />
                   )}
-                  {/* タッチ判定拡張エリア (透明) */}
                   <div
                     className="absolute -bottom-5 -left-2.5 -right-2.5 -top-25 z-50"
                     onTouchStart={(e) => {
