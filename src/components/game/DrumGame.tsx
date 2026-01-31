@@ -11,7 +11,7 @@ import {
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
   JudgmentType,
-  NOTE_CONFIG // ★ここを追加！
+  NOTE_CONFIG
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import styles from './DrumGame.module.css';
@@ -40,17 +40,14 @@ const DRUM_COLORS = [
 const DRUM_GROUP_COUNT = DRUM_COLORS.length;
 
 const DRUM_PADS = [
-  { label: 'CRASH L', group: 0, x: 25, y: 25, size: 'md', type: 'cymbal' },
-  { label: 'TOM 1', group: 1, x: 40, y: 35, size: 'md', type: 'drum' },
-  { label: 'TOM 2', group: 1, x: 60, y: 35, size: 'md', type: 'drum' },
-  { label: 'CRASH R', group: 0, x: 75, y: 25, size: 'md', type: 'cymbal' },
+  { label: 'CRASH L', group: 0, x: 15, y: 22, size: 'md', type: 'cymbal' },
+  { label: 'CRASH R', group: 0, x: 90, y: 25, size: 'md', type: 'cymbal' },
   
-  { label: 'HI-HAT', group: 0, x: 20, y: 55, size: 'md', type: 'cymbal' },
-  { label: 'SNARE', group: 1, x: 38, y: 65, size: 'lg', type: 'drum' },
-  { label: 'FLOOR', group: 1, x: 62, y: 65, size: 'lg', type: 'drum' },
-  { label: 'RIDE', group: 0, x: 80, y: 55, size: 'md', type: 'cymbal' },
+  { label: 'SNARE', group: 1, x: 24, y: 58, size: 'md', type: 'drum' },
+  { label: 'SNARE', group: 1, x: 80, y: 58, size: 'md', type: 'drum' },
   
-  { label: 'KICK', group: 2, x: 50, y: 85, size: 'xl', type: 'kick' },
+  { label: 'KICK', group: 2, x: 10, y: 68, size: 'md', type: 'kick' },
+  { label: 'KICK', group: 2, x: 95, y: 68, size: 'md', type: 'kick' },
 ] as const;
 
 const getNoteGroup = (lane: number) => lane % DRUM_GROUP_COUNT;
@@ -345,7 +342,7 @@ export default function DrumGame({
       onTouchStart={fanServiceTouchStart}
       onTouchEnd={fanServiceTouchEnd}
     >
-        {/* Background video matching GuitarGame */}
+        {/* Background video */}
         <video 
           className={styles.backgroundVideo}
           autoPlay 
@@ -406,9 +403,8 @@ export default function DrumGame({
                 className={`${styles.note} ${note.type === 'special' ? styles.special : ''}`}
                 style={{
                   left: `${left * 100}%`,
-                  // お邪魔ノーツの見た目（透明背景、絵文字表示）
                   backgroundColor: note.isObstruction ? 'transparent' : color.base,
-                  color: note.isObstruction ? undefined : color.base, // box-shadow用
+                  color: note.isObstruction ? undefined : color.base, 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
