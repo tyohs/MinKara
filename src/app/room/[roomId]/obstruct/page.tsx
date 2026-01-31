@@ -1,9 +1,11 @@
 "use client";
 
-//クールタイム待って連打するだけだとつまらないからポイント消費システムを追加してみた。お邪魔側も何かミニゲームさせといてもいい気はする。すごく質素。
-//連動だったり実際の動作の部分はもともとの機能が完成してきたら上乗せしていく予定。何か案があったらここに書いてくれるとうれしい。
+// クールタイム待って連打するだけだとつまらないからポイント消費システムを追加。
+// お邪魔側も何かミニゲームさせといてもいい気はする。すごく質素。
 
-import { useReducer, useEffect } from 'react';
+import { useReducer, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 // --- 型定義 ---
 type ActionItem = {
@@ -18,20 +20,18 @@ type State = {
   actions: ActionItem[];
 };
 
-type Action = 
-  | { type: 'TICK' }
-  | { type: 'TRIGGER'; id: number };
+type Action = { type: "TICK" } | { type: "TRIGGER"; id: number };
 
 // --- 設定値 ---
 const MAX_POINTS = 10;
 const ACTION_COST = 4;
 
 const initialList: ActionItem[] = [
-  { id: 1, name: '歌詞隠し', maxCoolDown: 15, remaining: 0 },
-  { id: 2, name: '別の音', maxCoolDown: 20, remaining: 0 },
-  { id: 3, name: 'ノーツ追加', maxCoolDown: 15, remaining: 0 },
-  { id: 4, name: 'ノーツ隠し', maxCoolDown: 12, remaining: 0 },
-  { id: 5, name: '紙吹雪', maxCoolDown: 10, remaining: 0 },
+  { id: 1, name: "歌詞隠し", maxCoolDown: 15, remaining: 0 },
+  { id: 2, name: "別の音", maxCoolDown: 20, remaining: 0 },
+  { id: 3, name: "ノーツ追加", maxCoolDown: 15, remaining: 0 },
+  { id: 4, name: "ノーツ隠し", maxCoolDown: 12, remaining: 0 },
+  { id: 5, name: "紙吹雪", maxCoolDown: 10, remaining: 0 },
 ];
 
 const initialState: State = {
@@ -42,7 +42,7 @@ const initialState: State = {
 // --- Reducer ---
 function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case 'TICK':
+    case "TICK":
       return {
         points: state.points < MAX_POINTS ? state.points + 1 : state.points,
         actions: state.actions.map((item) => ({
@@ -51,7 +51,7 @@ function reducer(state: State, action: Action): State {
         })),
       };
 
-    case 'TRIGGER': {
+    case "TRIGGER": {
       const targetIndex = state.actions.findIndex((a) => a.id === action.id);
       if (targetIndex === -1) return state;
 
@@ -78,28 +78,50 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-export default function Obstract() {
+export default function Obstruct() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const params = useParams(); // ルームIDを取得
+  const roomId = params.roomId as string;
 
   useEffect(() => {
     const timerId = setInterval(() => {
-      dispatch({ type: 'TICK' });
+      dispatch({ type: "TICK" });
     }, 1000);
 
     return () => clearInterval(timerId);
   }, []);
 
-  const handleActionClick = (id: number) => {
-    dispatch({ type: 'TRIGGER', id });
+  // ハンドラーを非同期に修正
+  const handleActionClick = async (id: number) => {
+    const action = state.actions.find((a) => a.id === id);
+
+    // 発動可能な条件（クールダウン終了かつポイント十分）を満たしているか確認
+    if (action && action.remaining === 0 && state.points >= ACTION_COST) {
+      
+      // ID: 3 (ノーツ追加) の場合、Broadcastを送信
+      if (id === 3) {
+        const channel = supabase.channel(`room:${roomId}`);
+        await channel.subscribe(async (status) => {
+          if (status === "SUBSCRIBED") {
+            await channel.send({
+              type: "broadcast",
+              event: "obstruct",
+              payload: { action: "add_note" },
+            });
+            supabase.removeChannel(channel);
+          }
+        });
+      }
+
+      dispatch({ type: "TRIGGER", id });
+    }
   };
 
   return (
     // 外枠コンテナ
     <div className="flex h-screen w-full select-none items-center justify-center bg-[#0f1219] font-mono text-white">
-      
       {/* お邪魔パネル本体 */}
-      <div className="relative w-full max-w-[420px] border-2 border-white bg-[#0f1219] p-5 shadow-[0_0_15px_rgba(0,0,0,0.7)]">
-        
+      <div className="relative w-full max-w-420px border-2 border-white bg-[#0f1219] p-5 shadow-[0_0_15px_rgba(0,0,0,0.7)]">
         {/* ヘッダー */}
         <div className="mb-4 border-b border-white pb-2 text-center text-xl font-bold">
           【お邪魔画面】
@@ -143,13 +165,16 @@ export default function Obstract() {
                   onClick={() => handleActionClick(action.id)}
                   // 条件付きスタイル: Readyならホバー効果、不可ならグレーアウト
                   className={`flex items-center justify-between mb-3 rounded px-2.5 py-2 transition-colors duration-100 
-                    ${isReady 
-                      ? 'cursor-pointer hover:bg-white/20 active:translate-y-[2px]' 
-                      : 'cursor-not-allowed text-[#666]'
+                    ${
+                      isReady
+                        ? "cursor-pointer hover:bg-white/20 active:translate-y-2px"
+                        : "cursor-not-allowed text-[#666]"
                     }`}
                 >
                   {/* 左側：ボタン名 */}
-                  <span className={`font-bold ${isReady ? 'text-[#aaddff]' : 'text-[#666]'}`}>
+                  <span
+                    className={`font-bold ${isReady ? "text-[#aaddff]" : "text-[#666]"}`}
+                  >
                     [{action.name}]
                   </span>
 
@@ -157,7 +182,9 @@ export default function Obstract() {
                   <span className="text-right">
                     {!isCoolDownFinished ? (
                       // クールダウン中
-                      <span className="text-[#666]">({action.remaining}秒)</span>
+                      <span className="text-[#666]">
+                        ({action.remaining}秒)
+                      </span>
                     ) : !hasEnoughPoints ? (
                       // コスト不足
                       <span className="text-sm text-[#ff3333]">コスト不足</span>

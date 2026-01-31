@@ -11,15 +11,13 @@ import {
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
   JudgmentType,
-  NOTE_CONFIG,
-  SCROLL_SPEED_2D_CORRECTION
+  NOTE_CONFIG // ★ここを追加！
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import styles from './DrumGame.module.css';
-import fanServiceStyles from './FanService.module.css';
 import { useFanService } from '@/hooks/useFanService';
-import { useRoomIdFromUrl } from '@/hooks/useRoomIdFromUrl';
-import { useFanServiceSender } from '@/hooks/useFanServiceSender';
+import { FanServiceRequest, FAN_SERVICE_CONFIG } from '@/types/fanService';
+import { supabase } from '@/lib/supabase';
 
 interface DrumGameProps {
   notes: NoteData[];
@@ -30,7 +28,6 @@ interface DrumGameProps {
   bpm?: number;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
-
 
 const HIT_LINE_POSITION = 0.18;
 
@@ -77,15 +74,65 @@ export default function DrumGame({
   const [activePads, setActivePads] = useState<Set<number>>(new Set());
   const [isLandscape, setIsLandscape] = useState(true);
 
+  // びりびり状態のstate
+  const [isShocked, setIsShocked] = useState(false);
+
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
   const visibleNotes = useMemo(() => notes.filter(note => !note.hit), [notes]);
 
+  // リアルタイムの時間参照用Ref
+  const currentTimeRef = useRef(0);
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
   // URLからroomIdを補完
-  const activeRoomId = useRoomIdFromUrl(roomId);
-  const { sendFanService: handleFanServiceSend, feedbackMessage: fanServiceSent } = useFanServiceSender(activeRoomId);
+  const [urlRoomId, setUrlRoomId] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !roomId) {
+      const match = window.location.pathname.match(/\/room\/([^\/]+)/);
+      if (match && match[1]) {
+        setUrlRoomId(match[1]);
+      }
+    }
+  }, [roomId]);
 
+  const activeRoomId = roomId || urlRoomId;
 
+  const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
+
+  // ファンサ送信コールバック
+  const handleFanServiceSend = useCallback(async (request: FanServiceRequest) => {
+    if (!activeRoomId) return;
+    
+    try {
+      const channel = supabase.channel(`room:${activeRoomId}`);
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Subscription timeout')), 5000);
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+      
+      await channel.send({
+        type: 'broadcast',
+        event: 'fan_service',
+        payload: request,
+      });
+      
+      supabase.removeChannel(channel);
+      
+      const config = FAN_SERVICE_CONFIG[request.type];
+      setFanServiceSent(`${config.icon} ${config.label}`);
+      setTimeout(() => setFanServiceSent(null), 1500);
+    } catch (error) {
+      console.error('[DrumGame] Failed to send fan service:', error);
+    }
+  }, [activeRoomId]);
 
   // ファンサフック
   const {
@@ -104,8 +151,14 @@ export default function DrumGame({
   const visibleDuration = useMemo(() => {
     const msPerBeat = 60000 / bpm;
     // 2D等速スクロールのため、3D表示（手前で加速する）に比べて体感速度が遅くなるのを補正
-    return msPerBeat * NOTE_CONFIG.beatsVisible * SCROLL_SPEED_2D_CORRECTION; 
+    return msPerBeat * NOTE_CONFIG.beatsVisible * 0.6; 
   }, [bpm]);
+
+  // びりびりエフェクトを発生させる関数
+  const triggerShockEffect = () => {
+    setIsShocked(true);
+    setTimeout(() => setIsShocked(false), 500);
+  };
 
   useScreenLock('landscape');
 
@@ -138,6 +191,33 @@ export default function DrumGame({
     const interval = setInterval(updateTime, GAME_LOOP.frameInterval);
     return () => clearInterval(interval);
   }, [songStartedAt]);
+
+  // お邪魔イベント受信
+  useEffect(() => {
+    if (!activeRoomId) return;
+
+    const channel = supabase.channel(`room:${activeRoomId}`);
+    
+    channel
+      .on('broadcast', { event: 'obstruct' }, (payload) => {
+        if (payload.payload.action === 'add_note') {
+          const newNote: NoteData = {
+            id: `obstruct-${Date.now()}`,
+            lane: Math.floor(Math.random() * 3), // 0-2のランダムなレーン
+            time: currentTimeRef.current + 2000, // 2秒後に降ってくる
+            type: 'normal',
+            hit: false,
+            isObstruction: true, // お邪魔フラグ
+          };
+          setNotes(prev => [...prev, newNote]);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeRoomId]);
 
   const showJudgment = useCallback((judgment: JudgmentType) => {
     if (judgmentTimeoutRef.current) {
@@ -173,6 +253,11 @@ export default function DrumGame({
     setNotes(prev => prev.map(note =>
       note.id === targetNote.id ? { ...note, hit: true } : note
     ));
+
+    // お邪魔ノーツを叩いた場合はエフェクト発動！
+    if (targetNote.isObstruction) {
+      triggerShockEffect();
+    }
 
     const baseScore = SCORE_VALUES[judgment];
     const comboBonus = 1 + combo / 100;
@@ -256,7 +341,7 @@ export default function DrumGame({
 
   return (
     <div 
-      className={styles.gameContainer}
+      className={`${styles.gameContainer} ${isShocked ? styles.shockedContainer : ''}`}
       onTouchStart={fanServiceTouchStart}
       onTouchEnd={fanServiceTouchEnd}
     >
@@ -276,24 +361,24 @@ export default function DrumGame({
 
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
-        <div className={fanServiceStyles.fanServiceSent}>
+        <div className={styles.fanServiceSent}>
           {fanServiceSent}
         </div>
       )}
 
       {/* ファンサ要求UI */}
       {canSendFanService ? (
-        <div className={fanServiceStyles.fanServicePopup}>
-          <div className={fanServiceStyles.fanServicePopupIcon}>🎤</div>
-          <div className={fanServiceStyles.fanServicePopupText}>
+        <div className={styles.fanServicePopup}>
+          <div className={styles.fanServicePopupIcon}>🎤</div>
+          <div className={styles.fanServicePopupText}>
             スワイプでファンサ要求！
           </div>
-          <div className={fanServiceStyles.fanServicePopupDirections}>
+          <div className={styles.fanServicePopupDirections}>
             ↑👋 ↓💕 ←😉 →✌️
           </div>
         </div>
       ) : (
-        <div className={fanServiceStyles.fanServiceCooldown}>
+        <div className={styles.fanServiceCooldown}>
           ファンサ {cooldownSeconds}秒
         </div>
       )}
@@ -321,10 +406,19 @@ export default function DrumGame({
                 className={`${styles.note} ${note.type === 'special' ? styles.special : ''}`}
                 style={{
                   left: `${left * 100}%`,
-                  color: color.base, // Used for box-shadow currentColor
-                  backgroundColor: color.base,
+                  // お邪魔ノーツの見た目（透明背景、絵文字表示）
+                  backgroundColor: note.isObstruction ? 'transparent' : color.base,
+                  color: note.isObstruction ? undefined : color.base, // box-shadow用
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: note.isObstruction ? '2rem' : undefined,
+                  boxShadow: note.isObstruction ? 'none' : undefined,
                 } as React.CSSProperties}
-              />
+              >
+                {/* お邪魔ノーツなら👿を表示 */}
+                {note.isObstruction ? '👿' : null}
+              </div>
             );
           })}
         </div>

@@ -10,6 +10,7 @@ import { submitScore, getUserId } from '@/hooks/useSubmitScore';
 import { getNotesFromPosition } from '@/lib/noteGenerator';
 
 type Instrument = 'keyboard' | 'guitar' | 'drums';
+type Difficulty = 'easy' | 'normal' | 'hard';
 
 export default function BandPage() {
   const params = useParams();
@@ -22,6 +23,13 @@ export default function BandPage() {
   // 楽器をクエリパラメータから取得（デフォルト: keyboard）
   const instrument = (searchParams.get('instrument') as Instrument) || 'keyboard';
   
+  // 難易度をクエリパラメータから取得
+  // UI上の「Normal」は 'easy' として渡され、「Hard」は 'hard' として渡される想定
+  const difficultyParam = searchParams.get('difficulty');
+  const difficulty: Difficulty = (difficultyParam === 'easy' || difficultyParam === 'hard') 
+    ? difficultyParam 
+    : 'normal'; // デフォルト
+
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
@@ -34,15 +42,15 @@ export default function BandPage() {
     return null;
   }, [session?.song_id]);
 
-  // 譜面データを取得
+  // 譜面データを取得（難易度を渡す）
   const chart = useMemo(() => {
     if (session?.song_id) {
-      return getChartForSong(session.song_id);
+      // 第2引数に difficulty を追加
+      return getChartForSong(session.song_id, difficulty);
     }
     // デモ用譜面
     return generateDemoChart();
-  }, [session?.song_id]);
-
+  }, [session?.song_id, difficulty]);
 
   // デモモードの場合のduration（6分間）
   const songDuration = song?.duration ?? 360;

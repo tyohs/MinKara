@@ -13,6 +13,8 @@ import {
   Mic,
   CheckCircle2,
   type LucideIcon,
+  Swords,     // Hardアイコン
+  Baby,       // Normalアイコン
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useRoomStore, fetchParticipants } from "@/store/useRoomStore";
@@ -26,10 +28,10 @@ import { useSyncedCountdown } from "@/hooks/useSyncedCountdown";
 
 type Role = "band" | "ojama";
 type InstrumentType = "keyboard" | "guitar" | "drums";
+type Difficulty = "easy" | "hard"; // 難易度の型定義
 
 const ROLE_SELECT_DURATION = 10; // seconds
 
-// Sound effect paths
 const SOUND_EFFECTS = {
   keyboard: "/soundEffect/roleSelect/roleSelect-keyboard.mp3",
   guitar: "/soundEffect/roleSelect/roleSelect-guitar.mp3",
@@ -89,16 +91,16 @@ export default function RoleSelectPage() {
   const [selectedInstrument, setSelectedInstrument] =
     useState<InstrumentType | null>(null);
 
-  // ★修正1: useState を削除し、useRef に変更
-  // これにより、値を変更しても再レンダリングが起きないため警告が消える
+  // 難易度ステート (デフォルトは easy = Normal)
+  const [difficulty, setDifficulty] = useState<Difficulty>("easy");
+
+  // 初期化判定用のRef
   const hasStartedRoleSelectRef = useRef(false);
 
   const [isReady, setIsReady] = useState(false);
 
-  // Audio ref to manage sound playback
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Sound effect player
   const playSound = useCallback((soundKey: keyof typeof SOUND_EFFECTS) => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -147,12 +149,12 @@ export default function RoleSelectPage() {
       session.status === "countdown" &&
       !hasStartedRoleSelectRef.current
     ) {
-      hasStartedRoleSelectRef.current = true; // Refの書き換えはレンダリングを引き起こさない
+      hasStartedRoleSelectRef.current = true;
       startRoleSelect(session.id).then(() => {
         refetch();
       });
     }
-  }, [session, refetch]); // hasStartedRoleSelectRef は依存配列に不要
+  }, [session, refetch]);
 
   useEffect(() => {
     if (isComplete && session && myUserId) {
@@ -172,7 +174,10 @@ export default function RoleSelectPage() {
           if (instrument === "keyboard") {
             router.push(`/room/${roomId}/keyboard`);
           } else {
-            router.push(`/room/${roomId}/band?instrument=${instrument}`);
+            // URLパラメータに difficulty を追加して遷移
+            router.push(
+              `/room/${roomId}/band?instrument=${instrument}&difficulty=${difficulty}`
+            );
           }
         } else {
           router.push(`/room/${roomId}/obstruct`);
@@ -187,6 +192,7 @@ export default function RoleSelectPage() {
     isSinger,
     selectedRole,
     selectedInstrument,
+    difficulty,
     roomId,
     router,
     myUserId,
@@ -360,6 +366,49 @@ export default function RoleSelectPage() {
                           />
                         ))}
                       </div>
+
+                      {/* ドラム選択時のみ表示される難易度選択UI */}
+                      {selectedInstrument === "drums" && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex justify-center gap-4 mt-6"
+                        >
+                          <button
+                            onClick={() => setDifficulty("easy")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl border transition-all ${
+                              difficulty === "easy"
+                                ? "bg-emerald-500/20 border-emerald-400 text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]"
+                                : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
+                            }`}
+                          >
+                            <Baby className="w-5 h-5" />
+                            <div className="text-left">
+                              <div className="font-bold text-sm">Normal</div>
+                              <div className="text-[10px] opacity-70">
+                                ずっと2分音符
+                              </div>
+                            </div>
+                          </button>
+
+                          <button
+                            onClick={() => setDifficulty("hard")}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl border transition-all ${
+                              difficulty === "hard"
+                                ? "bg-red-500/20 border-red-400 text-red-400 shadow-[0_0_15px_rgba(248,113,113,0.3)]"
+                                : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
+                            }`}
+                          >
+                            <Swords className="w-5 h-5" />
+                            <div className="text-left">
+                              <div className="font-bold text-sm">Hard</div>
+                              <div className="text-[10px] opacity-70">
+                                ランダム譜面
+                              </div>
+                            </div>
+                          </button>
+                        </motion.div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -383,6 +432,7 @@ export default function RoleSelectPage() {
                 </motion.button>
               </motion.div>
             ) : (
+              // 準備完了画面
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -401,6 +451,7 @@ export default function RoleSelectPage() {
             )}
           </div>
         ) : (
+          // ボーカル画面
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -425,8 +476,7 @@ export default function RoleSelectPage() {
   );
 }
 
-// Sub Components with Proper Types
-
+// サブコンポーネント
 interface RoleCardProps {
   title: string;
   subtitle: string;

@@ -6,10 +6,8 @@
   background: linear-gradient(180deg, #0a0a0f 0%, #1a1a2f 50%, #0a0a0f 100%);
   overflow: hidden;
   position: relative;
+  touch-action: none; /* Prevent scrolling/zooming */
   user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  font-family: 'Outfit', sans-serif;
 }
 
 /* Background video */
@@ -25,191 +23,245 @@
   pointer-events: none;
 }
 
-.noteRailArea {
-  position: relative;
-  z-index: 10;
-  flex: 0 0 140px;
-  padding: 20px 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+.rotateOverlay {
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: white;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
+  z-index: 9999;
 }
 
-.noteRail {
+.rotateTitle {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.rotateHint {
+  color: #9ca3af;
+}
+
+.noteRailArea {
+  flex: 1;
   position: relative;
   width: 100%;
-  height: 80px;
-  /* Removed border/background for cleaner look */
+  background: rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.scoreWrapper {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  z-index: 20;
+}
+
+/* Note Rail */
+.noteRail {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
 }
 
 .noteLine {
   position: absolute;
   left: 0;
-  right: 0;
-  top: 50%;
+  width: 100%;
   height: 2px;
-  transform: translateY(-50%);
   background: rgba(255, 255, 255, 0.2);
 }
 
 .hitMarker {
   position: absolute;
-  left: 18%;
-  top: 50%;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-  background: transparent;
+  left: 18%; /* Match HIT_LINE_POSITION */
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+  z-index: 5;
 }
 
-/* Note styling matching GuitarGame but circular for drums */
 .note {
   position: absolute;
-  top: 50%;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 15px currentColor;
-  z-index: 5;
-  /* Colors handled via inline styles in TSX, but defining base shape here */
-  border: 3px solid rgba(255,255,255,0.8);
+  z-index: 10;
 }
 
 .note.special {
-  width: 45px;
-  height: 45px;
-  border-color: #ffd700;
-  box-shadow: 0 0 25px #ffd700;
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 20px #fbbf24;
 }
 
-.scoreWrapper {
-  position: absolute;
-  right: 20px;
-  top: 20px;
-  z-index: 20;
-}
-
+/* Drum Stage */
 .drumStage {
+  height: 55%;
   position: relative;
-  flex: 1;
+  background: linear-gradient(180deg, rgba(20, 20, 35, 0.8) 0%, rgba(10, 10, 20, 0.95) 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 5;
+  align-items: center;
+  perspective: 1000px;
 }
 
 .drumKit {
   position: relative;
   width: 100%;
-  max-width: 1000px;
   height: 100%;
-  max-height: 600px;
+  max-width: 800px;
 }
 
-/* Drum Pad Styling - Simple, Clean, Geometric */
 .pad {
   position: absolute;
+  border-radius: 50%;
   transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 30% 30%, var(--pad-color), var(--pad-color-dark));
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  
-  border-radius: 50%;
-  border: 3px solid var(--pad-color);
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(4px);
-  
   cursor: pointer;
+  transition: transform 0.05s, box-shadow 0.05s;
   touch-action: manipulation;
-  transition: all 0.05s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  /* Size overrides */
-  padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .pad:active, .pad.active {
   transform: translate(-50%, -50%) scale(0.95);
-  background: var(--pad-color);
-  border-color: var(--pad-glow);
-  box-shadow: 0 0 30px var(--pad-color-dark);
-}
-
-.pad:active .padLabel, .pad.active .padLabel {
-  color: #000;
-  text-shadow: none;
+  box-shadow: 
+    0 0 20px var(--pad-glow),
+    inset 0 0 10px rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.8);
 }
 
 .padLabel {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  font-size: 14px;
   color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  font-weight: bold;
+  font-size: 0.8rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   pointer-events: none;
-  z-index: 2;
-}
-
-/* Specific Drum Type Styles */
-.pad.cymbal {
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(234, 179, 8, 0.1) 0%, rgba(234, 179, 8, 0.05) 100%);
-}
-
-.pad.drum {
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-}
-
-.pad.kick {
-  border-radius: 12px; /* Kick is square-ish */
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
 }
 
 /* Sizes */
-.size-xl { width: 160px; height: 120px; } /* Kick */
-.size-lg { width: 140px; height: 140px; }
-.size-md { width: 110px; height: 110px; }
+.size-md { width: 80px; height: 80px; }
+.size-lg { width: 100px; height: 100px; }
+.size-xl { width: 120px; height: 120px; }
 
-/* Rotate Overlay */
-.rotateOverlay {
+/* Types */
+.cymbal {
+  background: radial-gradient(circle, #d4af37, #8a7018);
+  border-radius: 50%;
+  border: 2px solid #f0e68c;
+}
+
+.kick {
+  border-radius: 10px; /* Square-ish for kick */
+}
+
+/* Fan Service Styles */
+.fanServicePopup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 1rem 2rem;
+  border-radius: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 100vw;
-  height: 100vh;
-  background: #020617;
-  color: #f8fafc;
-  text-align: center;
-  padding: 24px;
+  gap: 0.5rem;
+  z-index: 100;
+  pointer-events: none;
+  animation: fadeInOut 2s ease-in-out infinite;
 }
 
-.rotateTitle {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #22d3ee;
+.fanServicePopupIcon {
+  font-size: 2rem;
 }
 
-.rotateHint {
-  font-size: 14px;
-  color: #94a3b8;
+.fanServicePopupText {
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .size-xl { width: 100px; height: 80px; }
-  .size-lg { width: 90px; height: 90px; }
-  .size-md { width: 70px; height: 70px; }
-  
-  .noteRailArea { flex: 0 0 100px; }
-  .hitMarker { width: 50px; height: 50px; }
-  .note { width: 30px; height: 30px; }
+.fanServicePopupDirections {
+  color: #fbbf24;
+  font-size: 0.9rem;
+  font-family: monospace;
 }
 
+.fanServiceCooldown {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  color: #9ca3af;
+  font-size: 0.9rem;
+  font-family: monospace;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
+.fanServiceSent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 4rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 0 20px rgba(236, 72, 153, 0.8);
+  z-index: 100;
+  pointer-events: none;
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(0.95); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@keyframes popIn {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  70% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* びりびりエフェクト */
+.shockedContainer {
+  /* 0.5秒間揺れる */
+  animation: shock 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  /* 画面の色を反転させて衝撃を表現（数値が大きいほど激しく反転） */
+  filter: invert(0.3);
+}
+
+@keyframes shock {
+  10%, 90% { transform: translate3d(-4px, 0, 0); }
+  20%, 80% { transform: translate3d(6px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+  40%, 60% { transform: translate3d(8px, 0, 0); }
+}
