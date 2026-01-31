@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import NoteTrack from './NoteTrack';
 import PianoKeys from './PianoKeys';
 import ScoreDisplay from './ScoreDisplay';
@@ -12,14 +13,33 @@ import {
   VIBRATION_DURATION,
   JUDGMENT_DISPLAY_DURATION,
   GAME_LOOP,
-  JudgmentType
+  JudgmentType,
+  OBSTRUCT_IDS,
+  LANE_COUNT
 } from '@/lib/gameConfig';
 import { useScreenLock } from '@/hooks/useScreenLock';
 import { useFanService } from '@/hooks/useFanService';
 import { useRoomIdFromUrl } from '@/hooks/useRoomIdFromUrl';
 import { useFanServiceSender } from '@/hooks/useFanServiceSender';
+// import { supabase } from '@/lib/supabase'; // Hook側に移動したので削除
+import { useGameObstruction } from '@/hooks/useGameObstruction';
 import styles from './KeyboardGame.module.css';
 import fanServiceStyles from './FanService.module.css';
+
+// ニセノーツ用型定義
+interface FakeNote extends NoteData {
+  isFake: true;
+}
+
+// 紙吹雪の初期データ生成
+const CONFETTI_PARTICLES = Array.from({ length: 20 }).map((_, i) => ({
+  id: i,
+  x: Math.random() * 100, // 0-100vw
+  duration: 2 + Math.random() * 2,
+  color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][
+    Math.floor(Math.random() * 4)
+  ],
+}));
 
 interface KeyboardGameProps {
   notes: NoteData[];
@@ -229,16 +249,86 @@ export default function KeyboardGame({
     );
   }
 
+  // --- お邪魔機能ロジック ---
+  const { activeObstructs } = useGameObstruction(activeRoomId);
+  const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
+
+  // currentTimeをRefでも保持する（setInterval内で参照するため）
+  const currentTimeRef = useRef(0);
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
+  // ニセノーツ生成ロジック (ID 3)
+  useEffect(() => {
+    if (!activeObstructs.has(OBSTRUCT_IDS.FAKE)) {
+      setFakeNotes([]); // お邪魔終了時にクリア
+      return;
+    }
+
+    const interval = setInterval(() => {
+      // Refから最新の時間を取得して使用
+      const now = currentTimeRef.current;
+      const newFakeNote: FakeNote = {
+        id: `fake-${Date.now()}-${Math.random()}`,
+        lane: Math.floor(Math.random() * LANE_COUNT),
+        time: now + 2000,
+        hit: false,
+        isFake: true,
+        type: 'normal',
+      };
+      setFakeNotes(prev => [...prev, newFakeNote]);
+    }, 200); // 0.2秒ごとに生成
+
+    return () => clearInterval(interval);
+  }, [activeObstructs]); // currentTimeRefを使うのでcurrentTimeへの依存なし
+
+  // 古いニセノーツの掃除
+  useEffect(() => {
+    if (fakeNotes.length > 0) {
+      setFakeNotes(prev => prev.filter(n => n.time > currentTime - 200));
+    }
+  }, [currentTime, fakeNotes.length]);
+
+
   return (
     <div 
       className={styles.gameContainer}
       onTouchStart={fanServiceTouchStart}
       onTouchEnd={fanServiceTouchEnd}
     >
+      {/* お邪魔エフェクト：紙吹雪 (ID 5) */}
+      {activeObstructs.has(OBSTRUCT_IDS.CONFETTI) && (
+        <div className="absolute inset-0 z-60 pointer-events-none overflow-hidden">
+          {CONFETTI_PARTICLES.map((particle) => (
+            <motion.div
+              key={particle.id}
+              className="absolute w-4 h-4 bg-white rounded-full opacity-70"
+              initial={{
+                x: `${particle.x}vw`,
+                y: -20,
+                rotate: 0,
+              }}
+              animate={{
+                y: '110vh',
+                rotate: 360,
+                x: `${(particle.x + 20) % 100}vw`,
+              }}
+              transition={{
+                duration: particle.duration,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+              style={{
+                backgroundColor: particle.color,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* 判定表示（最上位に配置） */}
       <JudgmentDisplay judgment={lastJudgment} combo={combo} judgmentId={judgmentId} />
-
-
 
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
@@ -272,7 +362,7 @@ export default function KeyboardGame({
       {/* メインエリア（ノーツ落下） */}
       <div className={styles.mainArea}>
         <NoteTrack 
-          notes={notes.filter(n => !n.hit)} 
+          notes={[...notes.filter(n => !n.hit), ...fakeNotes]} 
           currentTime={currentTime} 
           bpm={bpm}
         />

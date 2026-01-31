@@ -36,14 +36,6 @@ export default function SingerGame({
   const isUserScrolling = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [fanServiceRequest, setFanServiceRequest] = useState<FanServiceRequest | null>(null);
-  const [lyricsHiddenUntil, setLyricsHiddenUntil] = useState<number>(0);
-  const isLyricsHidden = Date.now() < lyricsHiddenUntil;
-
-  // デバッグ用：お邪魔受信シミュレーション
-  const triggerLyricsHiding = () => {
-    // 10秒間歌詞を隠す
-    setLyricsHiddenUntil(Date.now() + 10000);
-  };
 
   // モザイク（歌詞隠し）状態
   const [isMosaicActive, setIsMosaicActive] = useState(false);
@@ -223,7 +215,7 @@ export default function SingerGame({
         }}
       >
         {lyrics && lyrics.lines.length > 0 ? (
-          <div className={`${styles.lyricsContainer} ${isLyricsHidden ? styles.lyricsHidden : ''}`}>
+          <div className={styles.lyricsContainer}>
             {/* 上部スペーサー */}
             <div className={styles.lyricsSpacer} />
             
@@ -273,11 +265,6 @@ export default function SingerGame({
           <span className={styles.timeDisplay}>{formatTime(song.duration)}</span>
         </div>
       </footer>
-
-      {/* デバッグ用トリガーボタン */}
-      <button onClick={triggerLyricsHiding} className={styles.debugButton}>
-        お邪魔テスト (10秒)
-      </button>
     </div>
   );
 }

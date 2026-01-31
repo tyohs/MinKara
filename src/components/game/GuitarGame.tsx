@@ -15,9 +15,11 @@ import {
   JudgmentType,
   LANE_COUNT,
   NOTE_CONFIG,
+  OBSTRUCT_IDS,
 } from "@/lib/gameConfig";
 import { useScreenLock } from "@/hooks/useScreenLock";
 import { useFanService } from "@/hooks/useFanService";
+import { useGameObstruction } from "@/hooks/useGameObstruction";
 import { FanServiceRequest, FAN_SERVICE_CONFIG } from "@/types/fanService";
 import { supabase } from "@/lib/supabase";
 
@@ -63,18 +65,6 @@ const STRING_COLORS = [
     text: "text-purple-500",
   },
 ];
-
-// お邪魔IDの定義
-const OBSTRUCT_IDS = {
-  BLIND: 1, // 歌詞隠し -> レーン隠し
-  SHAKE: 2, // 別の音 -> 画面揺れ
-  FAKE: 3, // ノーツ追加 -> ニセノーツ
-  STEALTH: 4, // ノーツ隠し -> ステルス
-  CONFETTI: 5, // 紙吹雪
-} as const;
-
-// お邪魔の効果時間 (ms)
-const OBSTRUCT_DURATION = 5000;
 
 interface GuitarGameProps {
   notes: NoteData[];
@@ -143,57 +133,14 @@ export default function GuitarGame({
   const activeRoomId = roomId || urlRoomId;
 
   // --- お邪魔機能ロジック ---
-  const [activeObstructs, setActiveObstructs] = useState<Set<number>>(
-    new Set(),
-  );
+  const { activeObstructs } = useGameObstruction(activeRoomId, 'guitar');
   const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
 
-  const triggerObstruct = useCallback((id: number) => {
-    console.log("[GuitarGame] Triggering obstruct ID:", id);
-    setActiveObstructs((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
+  // triggerObstructはHook内部で完結しているため、GuitarGame側で個別に定義する必要はなくなるが、
+  // もしデバッグ用などで使っていた場合はHookから返されたものを使う。
+  // ここではfake note生成ロジックがactiveObstructsに依存しているだけなのでそのまま使える。
 
-    // 一定時間後に解除
-    setTimeout(() => {
-      setActiveObstructs((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, OBSTRUCT_DURATION);
-  }, []);
-
-  // お邪魔イベントの受信
-  useEffect(() => {
-    if (!activeRoomId) return;
-
-    console.log("[GuitarGame] Subscribing to room:", activeRoomId);
-
-    const channel = supabase.channel(`room:${activeRoomId}`);
-    channel
-      .on("broadcast", { event: "obstruct" }, (payload) => {
-        const data = payload.payload as { id: number; target?: string };
-        console.log("[GuitarGame] Received obstruct event:", data);
-        const { id, target } = data;
-
-        // ターゲット判定: "singer"宛ての攻撃は無視する
-        if (target === "singer") return;
-
-        triggerObstruct(id);
-      })
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("[GuitarGame] Ready to receive obstructs");
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [activeRoomId, triggerObstruct]);
+  // ニセノーツ生成ロジック (ID 3)
 
   // ニセノーツ生成ロジック (ID 3)
   useEffect(() => {

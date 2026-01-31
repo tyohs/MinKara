@@ -106,3 +106,14 @@ export const GAME_LOOP = {
 /** 2Dスクロール時の体感速度補正係数 (3D表示との整合性確保のため) */
 export const SCROLL_SPEED_2D_CORRECTION = 0.6;
 
+// ========================================
+// お邪魔IDの定義
+// ========================================
+export const OBSTRUCT_IDS = {
+  BLIND: 1, // 歌詞隠し -> レーン隠し
+  SHAKE: 2, // 別の音 -> 画面揺れ
+  FAKE: 3, // ノーツ追加 -> ニセノーツ
+  STEALTH: 4, // ノーツ隠し -> ステルス
+  CONFETTI: 5, // 紙吹雪
+} as const;
+

@@ -11,6 +11,7 @@ export interface NoteData {
   type: 'normal' | 'special';
   hit?: boolean;
   isObstruction?: boolean; // 追加: お邪魔ノーツかどうかのフラグ
+  isFake?: boolean; // 追加: ニセノーツフラグ
 }
 
 interface NoteProps {
@@ -40,6 +41,7 @@ export default function Note({
 
   const color = KEY_COLORS[note.lane] || KEY_COLORS[0];
   const isSpecial = note.type === 'special';
+  const isFake = note.isFake;
 
   // レーンの中央位置
   const laneWidth = 100 / LANE_COUNT;
@@ -53,7 +55,7 @@ export default function Note({
 
   return (
     <div
-      className={`${styles.note} ${isSpecial ? styles.special : ''}`}
+      className={`${styles.note} ${isSpecial ? styles.special : ''} ${isFake ? styles.fake : ''}`}
       style={{
         '--note-color': color.base,
         '--note-glow': color.active,
@@ -62,6 +64,10 @@ export default function Note({
         transform: `translate(-50%, -50%) scale(${scale})`,
         width: `${laneWidth * NOTE_CONFIG.widthRatio}%`,
       } as React.CSSProperties}
-    />
+    >
+      {isFake && (
+        <div className={styles.fakeIcon}>👿</div>
+      )}
+    </div>
   );
 }
