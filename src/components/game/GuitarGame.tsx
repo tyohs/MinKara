@@ -120,6 +120,13 @@ export default function GuitarGame({
   const [activeKeys, setActiveKeys] = useState<Set<number>>(new Set());
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
+  
+  // currentTimeをRefで保持
+  const currentTimeRef = useRef(0);
+  useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+
   useScreenLock("portrait");
 
   // URLからroomIdを補完
@@ -142,7 +149,7 @@ export default function GuitarGame({
   const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
 
   const triggerObstruct = useCallback((id: number) => {
-    console.log("[GuitarGame] Triggering obstruct ID:", id); // デバッグ用ログ
+    console.log("[GuitarGame] Triggering obstruct ID:", id);
     setActiveObstructs((prev) => {
       const next = new Set(prev);
       next.add(id);
@@ -168,16 +175,12 @@ export default function GuitarGame({
     const channel = supabase.channel(`room:${activeRoomId}`);
     channel
       .on("broadcast", { event: "obstruct" }, (payload) => {
-        // payloadの型安全性を確保しつつ展開
         const data = payload.payload as { id: number; target?: string };
-        console.log("[GuitarGame] Received obstruct event:", data); // デバッグログ
+        console.log("[GuitarGame] Received obstruct event:", data);
         const { id, target } = data;
 
         // ターゲット判定: "singer"宛ての攻撃は無視する
-        if (target === "singer") {
-          console.log("[GuitarGame] Ignoring obstruct (target is singer)");
-          return;
-        }
+        if (target === "singer") return;
 
         triggerObstruct(id);
       })
@@ -195,7 +198,7 @@ export default function GuitarGame({
   // ニセノーツ生成ロジック (ID 3)
   useEffect(() => {
     if (!activeObstructs.has(OBSTRUCT_IDS.FAKE)) {
-      setFakeNotes([]); // お邪魔終了時にクリア
+      setFakeNotes([]);
       return;
     }
 
@@ -203,7 +206,7 @@ export default function GuitarGame({
       const newFakeNote: FakeNote = {
         id: `fake-${Date.now()}-${Math.random()}`,
         lane: Math.floor(Math.random() * LANE_COUNT),
-        time: currentTime + 2000,
+        time: currentTimeRef.current + 2000,
         hit: false,
         isFake: true,
         type: "normal",
@@ -212,7 +215,7 @@ export default function GuitarGame({
     }, 200);
 
     return () => clearInterval(interval);
-  }, [activeObstructs, currentTime]);
+  }, [activeObstructs]);
 
   // 古いニセノーツの掃除
   useEffect(() => {
@@ -280,19 +283,32 @@ export default function GuitarGame({
   const totalLanes = LANE_COUNT;
   const trackWidth = totalLanes * laneWidth + (totalLanes - 1) * laneGap;
 
-  // ゲームループ
+  // startTimestampをメモ化 (数値として依存関係を安定させる)
+  const startTimestamp = useMemo(() => 
+    songStartedAt ? new Date(songStartedAt).getTime() : null, 
+    [songStartedAt]
+  );
+
+  // ゲームループ (requestAnimationFrameを使用)
   useEffect(() => {
-    if (!songStartedAt) return;
-    const serverStartTime = new Date(songStartedAt).getTime();
-    const updateTime = () => {
+    if (startTimestamp === null) return;
+    
+    let animationFrameId: number;
+
+    const loop = () => {
       const now = Date.now();
-      const elapsed = now - serverStartTime;
+      const elapsed = now - startTimestamp;
       setCurrentTime(elapsed);
+      animationFrameId = requestAnimationFrame(loop);
     };
-    updateTime();
-    const interval = setInterval(updateTime, GAME_LOOP.frameInterval);
-    return () => clearInterval(interval);
-  }, [songStartedAt]);
+
+    // ループ開始
+    animationFrameId = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [startTimestamp]);
 
   const showJudgment = useCallback((judgment: JudgmentType) => {
     if (judgmentTimeoutRef.current) {
