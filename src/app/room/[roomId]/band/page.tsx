@@ -59,15 +59,22 @@ export default function BandPage() {
   const activeNotes = useMemo(() => {
     if (!chart) return [];
     
+    let targetNotes = chart.notes;
+
+    // ドラムの場合はノーツ密度を半分にする（1拍に1つ -> 2拍に1つ）
+    if (instrument === 'drums') {
+      targetNotes = targetNotes.filter((_, i) => i % 2 === 0);
+    }
+    
     if (session?.song_started_at) {
       const startTime = new Date(session.song_started_at).getTime();
       const elapsed = Date.now() - startTime;
-      const filtered = getNotesFromPosition(chart.notes, elapsed);
+      const filtered = getNotesFromPosition(targetNotes, elapsed);
       return filtered;
     }
     
-    return chart.notes;
-  }, [chart, session?.song_started_at, session?.song_id]);
+    return targetNotes;
+  }, [chart, session?.song_started_at, session?.song_id, instrument]);
 
 
 
