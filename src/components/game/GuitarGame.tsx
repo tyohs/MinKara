@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Noto_Sans_JP } from "next/font/google";
+import { motion } from "framer-motion";
 import ScoreDisplay from "./ScoreDisplay";
 import JudgmentDisplay from "./JudgmentDisplay";
 import { NoteData } from "./Note";
@@ -63,6 +64,18 @@ const STRING_COLORS = [
   },
 ];
 
+// お邪魔IDの定義
+const OBSTRUCT_IDS = {
+  BLIND: 1, // 歌詞隠し -> レーン隠し
+  SHAKE: 2, // 別の音 -> 画面揺れ
+  FAKE: 3, // ノーツ追加 -> ニセノーツ
+  STEALTH: 4, // ノーツ隠し -> ステルス
+  CONFETTI: 5, // 紙吹雪
+} as const;
+
+// お邪魔の効果時間 (ms)
+const OBSTRUCT_DURATION = 5000;
+
 interface GuitarGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
@@ -72,6 +85,21 @@ interface GuitarGameProps {
   bpm?: number;
   onGameEnd?: (score: number, maxCombo: number) => void;
 }
+
+// ニセノーツ用型定義
+interface FakeNote extends NoteData {
+  isFake: true;
+}
+
+// 紙吹雪の初期データ生成
+const CONFETTI_PARTICLES = Array.from({ length: 20 }).map((_, i) => ({
+  id: i,
+  x: Math.random() * 100, // 0-100vw
+  duration: 2 + Math.random() * 2,
+  color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][
+    Math.floor(Math.random() * 4)
+  ],
+}));
 
 export default function GuitarGame({
   notes: initialNotes,
@@ -93,9 +121,9 @@ export default function GuitarGame({
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
   useScreenLock("portrait");
+
   // URLからroomIdを補完
   const [urlRoomId, setUrlRoomId] = useState("");
-
   useEffect(() => {
     if (typeof window !== "undefined" && !roomId) {
       const match = window.location.pathname.match(/\/room\/([^\/]+)/);
@@ -106,6 +134,77 @@ export default function GuitarGame({
   }, [roomId]);
 
   const activeRoomId = roomId || urlRoomId;
+
+  // --- お邪魔機能ロジック ---
+  const [activeObstructs, setActiveObstructs] = useState<Set<number>>(
+    new Set(),
+  );
+  const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
+
+  const triggerObstruct = useCallback((id: number) => {
+    setActiveObstructs((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+
+    // 一定時間後に解除
+    setTimeout(() => {
+      setActiveObstructs((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, OBSTRUCT_DURATION);
+  }, []);
+
+  // お邪魔イベントの受信
+  useEffect(() => {
+    if (!activeRoomId) return;
+
+    const channel = supabase.channel(`room:${activeRoomId}`);
+    channel
+      .on("broadcast", { event: "obstruct" }, (payload) => {
+        const { id } = payload.payload as { id: number };
+        triggerObstruct(id);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeRoomId, triggerObstruct]);
+
+  // ニセノーツ生成ロジック (ID 3)
+  useEffect(() => {
+    if (!activeObstructs.has(OBSTRUCT_IDS.FAKE)) {
+      setFakeNotes([]); // お邪魔終了時にクリア
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const newFakeNote: FakeNote = {
+        id: `fake-${Date.now()}-${Math.random()}`,
+        lane: Math.floor(Math.random() * LANE_COUNT),
+        time: currentTime + 2000,
+        hit: false,
+        isFake: true,
+        type: "normal", // ★ここを追加しました（必須プロパティ）
+      };
+      setFakeNotes((prev) => [...prev, newFakeNote]);
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [activeObstructs, currentTime]);
+
+  // 古いニセノーツの掃除
+  useEffect(() => {
+    if (fakeNotes.length > 0) {
+      setFakeNotes((prev) => prev.filter((n) => n.time > currentTime - 200));
+    }
+  }, [currentTime, fakeNotes.length]);
+
+  // --- ファンサ機能 ---
   const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
   const handleFanServiceSend = useCallback(
     async (request: FanServiceRequest) => {
@@ -162,9 +261,9 @@ export default function GuitarGame({
   const laneWidth = 46;
   const laneGap = 8;
   const totalLanes = LANE_COUNT;
-
-  // トラック全体の幅
   const trackWidth = totalLanes * laneWidth + (totalLanes - 1) * laneGap;
+
+  // ゲームループ
   useEffect(() => {
     if (!songStartedAt) return;
     const serverStartTime = new Date(songStartedAt).getTime();
@@ -301,6 +400,37 @@ export default function GuitarGame({
         </video>
         <div className="absolute inset-0 bg-linear-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
       </div>
+
+      {/* お邪魔エフェクト：紙吹雪 (ID 5) */}
+      {activeObstructs.has(OBSTRUCT_IDS.CONFETTI) && (
+        <div className="absolute inset-0 z-60 pointer-events-none overflow-hidden">
+          {CONFETTI_PARTICLES.map((particle) => (
+            <motion.div
+              key={particle.id}
+              className="absolute w-4 h-4 bg-white rounded-full opacity-70"
+              initial={{
+                x: `${particle.x}vw`,
+                y: -20,
+                rotate: 0,
+              }}
+              animate={{
+                y: "110vh",
+                rotate: 360,
+                x: `${(particle.x + 20) % 100}vw`,
+              }}
+              transition={{
+                duration: particle.duration,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                backgroundColor: particle.color,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* 判定エフェクト表示 (オーバーレイ) */}
       <div className="absolute inset-0 pointer-events-none z-50 flex items-center justify-center">
         <JudgmentDisplay
@@ -334,7 +464,18 @@ export default function GuitarGame({
       )}
 
       {/* メインゲームエリア (ギター指板) */}
-      <div className="relative w-full h-full flex justify-center">
+      <motion.div
+        className="relative w-full h-full flex justify-center"
+        // お邪魔エフェクト：揺れ (ID 2)
+        animate={
+          activeObstructs.has(OBSTRUCT_IDS.SHAKE)
+            ? {
+                x: [0, -5, 5, -5, 5, 0],
+                transition: { repeat: Infinity, duration: 0.2 },
+              }
+            : {}
+        }
+      >
         {/* 指板 (トラック背景) */}
         <div
           className="relative h-full bg-[#1e1e1e] border-x-4 border-[#333] shadow-2xl"
@@ -378,36 +519,55 @@ export default function GuitarGame({
             }}
           />
 
-          {/* 降ってくるノーツ */}
-          {notes
-            .filter((n) => !n.hit)
-            .map((note) => {
-              const y = getNoteY(note.time);
-              const screenHeight =
-                typeof window !== "undefined" ? window.innerHeight : 600;
-              if (y < -50 || y > screenHeight + 50) return null;
-              const color = STRING_COLORS[note.lane % STRING_COLORS.length];
-              return (
-                <div
-                  key={note.id}
-                  className={`absolute rounded-full ${color.bg} ${color.shadow} shadow-lg border-2 border-white/60 z-20 flex items-center justify-center`}
-                  style={{
-                    left: "50%",
-                    marginLeft:
-                      note.lane * (laneWidth + laneGap) - trackWidth / 2,
-                    top: y,
-                    width: laneWidth,
-                    height: laneWidth,
-                    transform: "translateY(-50%)",
-                  }}
-                >
-                  {/* 弦を通す穴 */}
-                  <div className="w-3 h-3 bg-[#222] rounded-full shadow-inner" />
-                  {/* 立体感を出すハイライト */}
-                  <div className="absolute top-1 left-2 w-3 h-2 bg-white/50 rounded-full blur-[1px]" />
-                </div>
-              );
-            })}
+          {/* ノーツ描画 (通常ノーツ + ニセノーツ) */}
+          {[...notes.filter((n) => !n.hit), ...fakeNotes].map((note) => {
+            const isFake = (note as FakeNote).isFake;
+
+            const y = getNoteY(note.time);
+            const screenHeight =
+              typeof window !== "undefined" ? window.innerHeight : 600;
+            if (y < -50 || y > screenHeight + 50) return null;
+            const color = STRING_COLORS[note.lane % STRING_COLORS.length];
+
+            // お邪魔エフェクト：ステルス (ID 4)
+            const isStealth =
+              activeObstructs.has(OBSTRUCT_IDS.STEALTH) &&
+              y > screenHeight * 0.5;
+
+            return (
+              <motion.div
+                key={note.id}
+                initial={false}
+                animate={{ opacity: isStealth ? 0 : isFake ? 0.7 : 1 }}
+                className={`absolute rounded-full ${color.bg} ${color.shadow} shadow-lg border-2 border-white/60 z-20 flex items-center justify-center`}
+                style={{
+                  left: "50%",
+                  marginLeft:
+                    note.lane * (laneWidth + laneGap) - trackWidth / 2,
+                  top: y,
+                  width: laneWidth,
+                  height: laneWidth,
+                  transform: "translateY(-50%)",
+                  borderStyle: isFake ? "dashed" : "solid",
+                }}
+              >
+                <div className="w-3 h-3 bg-[#222] rounded-full shadow-inner" />
+                <div className="absolute top-1 left-2 w-3 h-2 bg-white/50 rounded-full blur-[1px]" />
+                {isFake && (
+                  <div className="absolute text-xs font-bold text-black">?</div>
+                )}
+              </motion.div>
+            );
+          })}
+
+          {/* お邪魔エフェクト：ブラインド (ID 1) */}
+          {activeObstructs.has(OBSTRUCT_IDS.BLIND) && (
+            <div className="absolute top-0 left-0 w-full h-[60%] bg-linear-to-b from-black via-black/90 to-transparent z-30 flex items-center justify-center">
+              <span className="text-red-500 font-bold text-2xl tracking-widest animate-pulse">
+                BLIND
+              </span>
+            </div>
+          )}
         </div>
 
         {/* 操作ボタンエリア (指板の下部) */}
@@ -491,7 +651,7 @@ export default function GuitarGame({
             })}
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
