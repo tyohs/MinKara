@@ -15,13 +15,13 @@ import {
   JudgmentType,
   LANE_COUNT,
   NOTE_CONFIG,
-  OBSTRUCT_IDS,
 } from "@/lib/gameConfig";
 import { useScreenLock } from "@/hooks/useScreenLock";
 import { useFanService } from "@/hooks/useFanService";
-import { useGameObstruction } from "@/hooks/useGameObstruction";
 import { FanServiceRequest, FAN_SERVICE_CONFIG } from "@/types/fanService";
 import { supabase } from "@/lib/supabase";
+import FanServiceDisplay from "./FanServiceDisplay";
+import fanServiceStyles from "./FanService.module.css"; // スタイルを追加
 
 // フォント設定
 const notoSansJP = Noto_Sans_JP({ weight: ["700"], subsets: ["latin"] });
@@ -66,6 +66,18 @@ const STRING_COLORS = [
   },
 ];
 
+// お邪魔IDの定義
+const OBSTRUCT_IDS = {
+  BLIND: 1, // 歌詞隠し -> レーン隠し
+  SHAKE: 2, // 別の音 -> 画面揺れ
+  FAKE: 3, // ノーツ追加 -> ニセノーツ
+  STEALTH: 4, // ノーツ隠し -> ステルス
+  CONFETTI: 5, // 紙吹雪
+} as const;
+
+// お邪魔の効果時間 (ms)
+const OBSTRUCT_DURATION = 5000;
+
 interface GuitarGameProps {
   notes: NoteData[];
   songStartedAt: string | null;
@@ -81,7 +93,15 @@ interface FakeNote extends NoteData {
   isFake: true;
 }
 
-
+// 紙吹雪の初期データ生成
+const CONFETTI_PARTICLES = Array.from({ length: 20 }).map((_, i) => ({
+  id: i,
+  x: Math.random() * 100, // 0-100vw
+  duration: 2 + Math.random() * 2,
+  color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][
+    Math.floor(Math.random() * 4)
+  ],
+}));
 
 export default function GuitarGame({
   notes: initialNotes,
@@ -124,9 +144,73 @@ export default function GuitarGame({
 
   const activeRoomId = roomId || urlRoomId;
 
+  // --- ファンサ要求管理用のState ---
+  const [fanServiceRequest, setFanServiceRequest] = useState<FanServiceRequest | null>(null);
+
   // --- お邪魔機能ロジック ---
-  const { activeObstructs } = useGameObstruction(activeRoomId);
+  const [activeObstructs, setActiveObstructs] = useState<Set<number>>(
+    new Set(),
+  );
   const [fakeNotes, setFakeNotes] = useState<FakeNote[]>([]);
+
+  const triggerObstruct = useCallback((id: number) => {
+    console.log("[GuitarGame] Triggering obstruct ID:", id);
+    setActiveObstructs((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+
+    // 一定時間後に解除
+    setTimeout(() => {
+      setActiveObstructs((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, OBSTRUCT_DURATION);
+  }, []);
+
+  // イベント受信 (お邪魔 & ファンサ)
+  useEffect(() => {
+    if (!activeRoomId) return;
+
+    console.log("[GuitarGame] Subscribing to room:", activeRoomId);
+
+    const channel = supabase.channel(`room:${activeRoomId}`);
+    channel
+      // ファンサ要求の受信
+      .on('broadcast', { event: 'fan_service' }, (payload) => {
+        console.log('[GuitarGame] Received fan_service event:', payload);
+        const request = payload.payload as FanServiceRequest;
+        setFanServiceRequest(request);
+      })
+      // お邪魔イベントの受信
+      .on("broadcast", { event: "obstruct" }, (payload) => {
+        const data = payload.payload as { id: number; target?: string };
+        console.log("[GuitarGame] Received obstruct event:", data);
+        const { id, target } = data;
+
+        // ターゲット判定: "singer"宛ての攻撃は無視する
+        if (target === "singer") return;
+
+        triggerObstruct(id);
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("[GuitarGame] Ready to receive events");
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeRoomId, triggerObstruct]);
+
+  // ファンサ表示完了コールバック
+  const handleFanServiceDismiss = useCallback(() => {
+    setFanServiceRequest(null);
+  }, []);
 
   // ニセノーツ生成ロジック (ID 3)
   useEffect(() => {
@@ -150,15 +234,14 @@ export default function GuitarGame({
     return () => clearInterval(interval);
   }, [activeObstructs]);
 
-  // 古いニセノーツの掃除 (自動消滅、ミスにはならない)
+  // 古いニセノーツの掃除
   useEffect(() => {
     if (fakeNotes.length > 0) {
       setFakeNotes((prev) => prev.filter((n) => n.time > currentTime - 200));
     }
-  }, [currentTime, fakeNotes]); // 依存配列修正
+  }, [currentTime, fakeNotes.length]);
 
-
-  // --- ファンサ機能 ---
+  // --- ファンサ送信機能 ---
   const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
   const handleFanServiceSend = useCallback(
     async (request: FanServiceRequest) => {
@@ -217,23 +300,13 @@ export default function GuitarGame({
   const totalLanes = LANE_COUNT;
   const trackWidth = totalLanes * laneWidth + (totalLanes - 1) * laneGap;
 
-  // startTimestampをメモ化 (数値として依存関係を安定させる)
+  // startTimestampをメモ化
   const startTimestamp = useMemo(() => 
     songStartedAt ? new Date(songStartedAt).getTime() : null, 
     [songStartedAt]
   );
 
-  // 紙吹雪パーティクル (再レンダリングごとの生成を避ける)
-  const confettiParticles = useMemo(() => 
-    Array.from({ length: 12 }).map((_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      duration: 2 + Math.random() * 2,
-      color: ["#ff0000", "#00ff00", "#0000ff", "#ffff00"][Math.floor(Math.random() * 4)],
-    })), 
-  []);
-
-  // ゲームループ (requestAnimationFrameを使用)
+  // ゲームループ
   useEffect(() => {
     if (startTimestamp === null) return;
     
@@ -246,7 +319,6 @@ export default function GuitarGame({
       animationFrameId = requestAnimationFrame(loop);
     };
 
-    // ループ開始
     animationFrameId = requestAnimationFrame(loop);
 
     return () => {
@@ -267,31 +339,13 @@ export default function GuitarGame({
 
   const handleKeyPress = useCallback(
     (lane: number) => {
-      // 判定対象のノーツを探す（通常ノーツ + ニセノーツ）
-      const targetNote = [...notes, ...fakeNotes].find(
+      const targetNote = notes.find(
         (note) =>
           note.lane === lane &&
           !note.hit &&
           Math.abs(note.time - currentTime) <= TIMING_WINDOWS.good,
       );
       if (!targetNote) return;
-
-      // ニセノーツを叩いた場合：BAD判定 (ペナルティ)
-      if ('isFake' in targetNote && targetNote.isFake) {
-        setFakeNotes(prev => prev.map(note => 
-          note.id === targetNote.id ? { ...note, hit: true } : note
-        ));
-        
-        setScore(prev => prev + SCORE_VALUES.bad);
-        setCombo(0); // コンボ中断
-        showJudgment('bad');
-        
-        if (navigator.vibrate) {
-          navigator.vibrate(VIBRATION_DURATION.bad);
-        }
-        return;
-      }
-
       const timeDiff = Math.abs(targetNote.time - currentTime);
       let judgment: JudgmentType;
       if (timeDiff <= TIMING_WINDOWS.perfect) {
@@ -321,7 +375,7 @@ export default function GuitarGame({
         navigator.vibrate(VIBRATION_DURATION[judgment]);
       }
     },
-    [notes, fakeNotes, currentTime, combo, showJudgment],
+    [notes, currentTime, combo, showJudgment],
   );
 
   useEffect(() => {
@@ -333,7 +387,6 @@ export default function GuitarGame({
   }, []);
 
   useEffect(() => {
-    // ミス判定 (通常のノーツのみ対象)
     const missedNotes = notes.filter(
       (note) => !note.hit && note.time < currentTime - TIMING_WINDOWS.good - 50,
     );
@@ -397,10 +450,18 @@ export default function GuitarGame({
         <div className="absolute inset-0 bg-linear-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
       </div>
 
+      {/* ファンサ表示（全画面オーバーレイ） */}
+      {fanServiceRequest && (
+        <FanServiceDisplay 
+          request={fanServiceRequest} 
+          onDismiss={handleFanServiceDismiss} 
+        />
+      )}
+
       {/* お邪魔エフェクト：紙吹雪 (ID 5) */}
       {activeObstructs.has(OBSTRUCT_IDS.CONFETTI) && (
         <div className="absolute inset-0 z-60 pointer-events-none overflow-hidden">
-          {confettiParticles.map((particle) => (
+          {CONFETTI_PARTICLES.map((particle) => (
             <motion.div
               key={particle.id}
               className="absolute w-4 h-4 bg-white rounded-full opacity-70"
@@ -439,23 +500,28 @@ export default function GuitarGame({
       <div className="absolute top-4 left-4 z-40">
         <ScoreDisplay score={score} combo={combo} />
       </div>
+
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
-        <div className="absolute top-20 right-4 z-50 bg-pink-500/90 text-white px-4 py-2 rounded-full font-bold shadow-lg animate-bounce">
+        <div className={fanServiceStyles.fanServiceSent}>
           {fanServiceSent}
         </div>
       )}
+
       {/* ファンサ要求UI */}
       {canSendFanService ? (
-        <div className="absolute bottom-32 right-4 z-50 flex flex-col items-center gap-2 pointer-events-none opacity-80">
-          <div className="bg-white/10 backdrop-blur text-white text-[10px] px-2 py-1 rounded border border-white/20">
-            Fansa!
+        <div className={fanServiceStyles.fanServicePopup}>
+          <div className={fanServiceStyles.fanServicePopupIcon}>🎤</div>
+          <div className={fanServiceStyles.fanServicePopupText}>
+            スワイプでファンサ要求！
           </div>
-          <div className="text-2xl animate-pulse">🎤</div>
+          <div className={fanServiceStyles.fanServicePopupDirections}>
+            ↑👋 ↓💕 ←😉 →✌️
+          </div>
         </div>
       ) : (
-        <div className="absolute bottom-32 right-4 z-50 bg-gray-800/80 text-gray-400 text-xs px-3 py-1 rounded-full border border-gray-700">
-          CT {cooldownSeconds}s
+        <div className={fanServiceStyles.fanServiceCooldown}>
+          ファンサ {cooldownSeconds}秒
         </div>
       )}
 
