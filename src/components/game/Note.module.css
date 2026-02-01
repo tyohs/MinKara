@@ -46,3 +46,21 @@
       0 0 40px rgba(255, 215, 0, 0.7);
   }
 }
+
+.fake {
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.fakeIcon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px; /* 大幅に拡大 */
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.8)); /* 影を強くして視認性向上 */
+  z-index: 10;
+  pointer-events: none; /* クリックを阻害しないように */
+  white-space: nowrap; /* 改行防止 */
+}
