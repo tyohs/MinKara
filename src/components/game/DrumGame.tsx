@@ -69,8 +69,8 @@ const DRUM_PADS = [
   { label: 'SNARE', group: 1, x: 24, y: 38, size: 'md', type: 'drum' },
   { label: 'SNARE', group: 1, x: 80, y: 38, size: 'md', type: 'drum' },
   
-  { label: 'KICK', group: 2, x: 10, y: 48, size: 'md', type: 'kick' },
-  { label: 'KICK', group: 2, x: 95, y: 48, size: 'md', type: 'kick' },
+  { label: 'KICK', group: 2, x: 10, y: 35, size: 'md', type: 'kick' },
+  { label: 'KICK', group: 2, x: 95, y: 35, size: 'md', type: 'kick' },
 ] as const;
 
 const getNoteGroup = (lane: number) => lane % DRUM_GROUP_COUNT;
