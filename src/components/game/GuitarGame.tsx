@@ -20,6 +20,8 @@ import { useScreenLock } from "@/hooks/useScreenLock";
 import { useFanService } from "@/hooks/useFanService";
 import { FanServiceRequest, FAN_SERVICE_CONFIG } from "@/types/fanService";
 import { supabase } from "@/lib/supabase";
+import FanServiceDisplay from "./FanServiceDisplay";
+import fanServiceStyles from "./FanService.module.css"; // スタイルを追加
 
 // フォント設定
 const notoSansJP = Noto_Sans_JP({ weight: ["700"], subsets: ["latin"] });
@@ -142,6 +144,9 @@ export default function GuitarGame({
 
   const activeRoomId = roomId || urlRoomId;
 
+  // --- ファンサ要求管理用のState ---
+  const [fanServiceRequest, setFanServiceRequest] = useState<FanServiceRequest | null>(null);
+
   // --- お邪魔機能ロジック ---
   const [activeObstructs, setActiveObstructs] = useState<Set<number>>(
     new Set(),
@@ -166,7 +171,7 @@ export default function GuitarGame({
     }, OBSTRUCT_DURATION);
   }, []);
 
-  // お邪魔イベントの受信
+  // イベント受信 (お邪魔 & ファンサ)
   useEffect(() => {
     if (!activeRoomId) return;
 
@@ -174,6 +179,13 @@ export default function GuitarGame({
 
     const channel = supabase.channel(`room:${activeRoomId}`);
     channel
+      // ファンサ要求の受信
+      .on('broadcast', { event: 'fan_service' }, (payload) => {
+        console.log('[GuitarGame] Received fan_service event:', payload);
+        const request = payload.payload as FanServiceRequest;
+        setFanServiceRequest(request);
+      })
+      // お邪魔イベントの受信
       .on("broadcast", { event: "obstruct" }, (payload) => {
         const data = payload.payload as { id: number; target?: string };
         console.log("[GuitarGame] Received obstruct event:", data);
@@ -186,7 +198,7 @@ export default function GuitarGame({
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          console.log("[GuitarGame] Ready to receive obstructs");
+          console.log("[GuitarGame] Ready to receive events");
         }
       });
 
@@ -194,6 +206,11 @@ export default function GuitarGame({
       supabase.removeChannel(channel);
     };
   }, [activeRoomId, triggerObstruct]);
+
+  // ファンサ表示完了コールバック
+  const handleFanServiceDismiss = useCallback(() => {
+    setFanServiceRequest(null);
+  }, []);
 
   // ニセノーツ生成ロジック (ID 3)
   useEffect(() => {
@@ -224,7 +241,7 @@ export default function GuitarGame({
     }
   }, [currentTime, fakeNotes.length]);
 
-  // --- ファンサ機能 ---
+  // --- ファンサ送信機能 ---
   const [fanServiceSent, setFanServiceSent] = useState<string | null>(null);
   const handleFanServiceSend = useCallback(
     async (request: FanServiceRequest) => {
@@ -283,13 +300,13 @@ export default function GuitarGame({
   const totalLanes = LANE_COUNT;
   const trackWidth = totalLanes * laneWidth + (totalLanes - 1) * laneGap;
 
-  // startTimestampをメモ化 (数値として依存関係を安定させる)
+  // startTimestampをメモ化
   const startTimestamp = useMemo(() => 
     songStartedAt ? new Date(songStartedAt).getTime() : null, 
     [songStartedAt]
   );
 
-  // ゲームループ (requestAnimationFrameを使用)
+  // ゲームループ
   useEffect(() => {
     if (startTimestamp === null) return;
     
@@ -302,7 +319,6 @@ export default function GuitarGame({
       animationFrameId = requestAnimationFrame(loop);
     };
 
-    // ループ開始
     animationFrameId = requestAnimationFrame(loop);
 
     return () => {
@@ -434,6 +450,14 @@ export default function GuitarGame({
         <div className="absolute inset-0 bg-linear-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent" />
       </div>
 
+      {/* ファンサ表示（全画面オーバーレイ） */}
+      {fanServiceRequest && (
+        <FanServiceDisplay 
+          request={fanServiceRequest} 
+          onDismiss={handleFanServiceDismiss} 
+        />
+      )}
+
       {/* お邪魔エフェクト：紙吹雪 (ID 5) */}
       {activeObstructs.has(OBSTRUCT_IDS.CONFETTI) && (
         <div className="absolute inset-0 z-60 pointer-events-none overflow-hidden">
@@ -476,23 +500,28 @@ export default function GuitarGame({
       <div className="absolute top-4 left-4 z-40">
         <ScoreDisplay score={score} combo={combo} />
       </div>
+
       {/* ファンサ送信フィードバック */}
       {fanServiceSent && (
-        <div className="absolute top-20 right-4 z-50 bg-pink-500/90 text-white px-4 py-2 rounded-full font-bold shadow-lg animate-bounce">
+        <div className={fanServiceStyles.fanServiceSent}>
           {fanServiceSent}
         </div>
       )}
+
       {/* ファンサ要求UI */}
       {canSendFanService ? (
-        <div className="absolute bottom-32 right-4 z-50 flex flex-col items-center gap-2 pointer-events-none opacity-80">
-          <div className="bg-white/10 backdrop-blur text-white text-[10px] px-2 py-1 rounded border border-white/20">
-            Fansa!
+        <div className={fanServiceStyles.fanServicePopup}>
+          <div className={fanServiceStyles.fanServicePopupIcon}>🎤</div>
+          <div className={fanServiceStyles.fanServicePopupText}>
+            スワイプでファンサ要求！
           </div>
-          <div className="text-2xl animate-pulse">🎤</div>
+          <div className={fanServiceStyles.fanServicePopupDirections}>
+            ↑👋 ↓💕 ←😉 →✌️
+          </div>
         </div>
       ) : (
-        <div className="absolute bottom-32 right-4 z-50 bg-gray-800/80 text-gray-400 text-xs px-3 py-1 rounded-full border border-gray-700">
-          CT {cooldownSeconds}s
+        <div className={fanServiceStyles.fanServiceCooldown}>
+          ファンサ {cooldownSeconds}秒
         </div>
       )}
 
