@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Square } from 'lucide-react';
 import { getLyricsForSong } from '@/data/lyrics';
 import FanServiceDisplay from './FanServiceDisplay';
 import type { Song } from '@/types';
@@ -22,6 +23,7 @@ interface SingerGameProps {
   songStartedAt: string | null;
   roomId?: string;
   onGameEnd?: () => void;
+  onStop?: () => void;
 }
 
 export default function SingerGame({
@@ -29,6 +31,7 @@ export default function SingerGame({
   songStartedAt,
   roomId = '',
   onGameEnd,
+  onStop,
 }: SingerGameProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const gameEndedRef = useRef(false);
@@ -197,6 +200,19 @@ export default function SingerGame({
           <span className={styles.micIcon}>🎤</span>
           <span className={styles.roleText}>あなたがシンガーです</span>
         </div>
+        {onStop && (
+           <button
+             onClick={() => {
+               if (confirm('本当に演奏を停止しますか？')) {
+                 onStop();
+               }
+             }}
+             className={styles.stopButton}
+           >
+             <Square className="w-4 h-4 fill-current" />
+             <span>演奏停止</span>
+           </button>
+        )}
         <h1 className={styles.songTitle}>{song.title}</h1>
         <p className={styles.artistName}>{song.artist}</p>
       </header>

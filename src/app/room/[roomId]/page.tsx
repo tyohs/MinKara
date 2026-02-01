@@ -16,6 +16,7 @@ import {
   Mic,
   ArrowUp,
   Loader2,
+  Square,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import {
@@ -25,7 +26,11 @@ import {
   generateUserId,
 } from "@/store/useRoomStore";
 import { GENRES, filterSongs, getSongById } from "@/data/songs";
-import { useGameSession, createGameSession } from "@/hooks/useGameSession";
+import {
+  useGameSession,
+  createGameSession,
+  finishSession,
+} from "@/hooks/useGameSession";
 import { useDisplayCountdown } from "@/hooks/useSyncedCountdown";
 import type { Participant, Reservation, Song } from "@/types";
 
@@ -236,6 +241,18 @@ export default function DenmokuPage() {
     }
   };
 
+  const handleStopSession = async () => {
+    if (!session || !isHost) return;
+    if (!confirm("本当に演奏を停止しますか？")) return;
+
+    try {
+      await finishSession(session.id);
+    } catch (error) {
+      console.error("Failed to stop session:", error);
+      alert("演奏の停止に失敗しました。");
+    }
+  };
+
   const handleReorder = async (newOrder: Reservation[]) => {
     setReservations(newOrder);
 
@@ -378,6 +395,16 @@ export default function DenmokuPage() {
                 </div>
 
                 <div className="flex gap-3 w-full sm:w-auto">
+                  {/* Stop Button (Only visible if playing and user is host) */}
+                  {session?.status === "playing" && isHost && (
+                    <button
+                      onClick={handleStopSession}
+                      className="flex-1 sm:flex-initial px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                    >
+                      <Square className="w-4 h-4 fill-current" />
+                      <span>演奏停止</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowRoulette(true)}
                     disabled={showCountdownOverlay || isLoading}
