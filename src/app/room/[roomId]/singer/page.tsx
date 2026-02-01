@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SingerGame } from '@/components/game';
 import { getSongById } from '@/data/songs';
-import { useGameSession } from '@/hooks/useGameSession';
+import { useGameSession, finishSession } from '@/hooks/useGameSession';
 import { useSyncedAudio } from '@/hooks/useSyncedAudio';
 import styles from '@/components/game/SingerGame.module.css';
 
@@ -63,7 +63,12 @@ export default function SingerPage() {
   // ゲーム開始の準備（status変更に追従）
   useEffect(() => {
     setIsReady(session?.status === 'playing');
-  }, [session?.status]);
+
+    // 強制終了（演奏停止）された場合
+    if (session?.status === 'finished') {
+      router.push(`/room/${roomId}`);
+    }
+  }, [session?.status, roomId, router]);
 
   // ゲーム終了時のコールバック
   const handleGameEnd = useCallback(() => {
@@ -75,6 +80,17 @@ export default function SingerPage() {
       router.push(`/room/${roomId}`);
     }, 3000);
   }, [roomId, router, gameEnded]);
+
+  // 強制停止ハンドラ
+  const handleStop = useCallback(async () => {
+    if (!session?.id) return;
+    try {
+      await finishSession(session.id);
+      // リダイレクトは useEffect で session.status === 'finished' を検知して行われる
+    } catch (error) {
+      console.error('Failed to stop session:', error);
+    }
+  }, [session?.id]);
 
   // クリーンアップ
   useEffect(() => {
@@ -151,6 +167,7 @@ export default function SingerPage() {
           songStartedAt={session?.song_started_at ?? null}
           roomId={roomId}
           onGameEnd={handleGameEnd}
+          onStop={handleStop}
         />
       )}
     </>
