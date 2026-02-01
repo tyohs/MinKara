@@ -84,7 +84,12 @@ export default function BandPage() {
     if (!session || session.status === 'playing') {
       setIsReady(true);
     }
-  }, [session]);
+
+    // 強制終了（演奏停止）されるか、finishedになったらルームへ戻る
+    if (session?.status === 'finished') {
+      router.push(`/room/${roomId}`);
+    }
+  }, [session, roomId, router]);
 
   // ゲーム終了時のコールバック
   const handleGameEnd = useCallback(async (score: number, maxCombo: number) => {
