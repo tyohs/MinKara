@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { Mic, Users, ChevronRight, type LucideIcon } from "lucide-react";
 import { Noto_Sans_JP } from "next/font/google";
 
-// 日本語フォント
 const notoSansJP = Noto_Sans_JP({
   weight: ["500", "700"],
   subsets: ["latin"],
@@ -18,7 +17,7 @@ export default function HomePage() {
 
   return (
     <div
-      className={`relative h-dvh w-screen overflow-hidden bg-[#050505] text-white ${notoSansJP.className}`}
+      className={`relative h-dvh w-full overflow-hidden bg-[#050505] text-white ${notoSansJP.className}`}
     >
       {/* 背景動画 & オーバーレイ */}
       <div className="absolute inset-0 z-0">
@@ -32,22 +31,20 @@ export default function HomePage() {
         >
           <source src="/video/background-monochrome.mp4" type="video/mp4" />
         </video>
-        {/* グラデーションオーバーレイ */}
-        <div className="absolute inset-0 bg-linear-to-t from-[#050505] via-transparent to-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/40" />
       </div>
 
       {/* メインレイアウト */}
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-between px-6 py-4">
         {/* ロゴエリア */}
-        <div className="flex-1 flex flex-col justify-center items-center w-full max-w-5xl">
+        <div className="flex-1 flex flex-col justify-center items-center w-full max-w-[650px]">
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 1, ease: "easeOut" }}
             className="relative w-full flex flex-col items-center gap-6"
           >
-            {/* ロゴ画像 */}
-            <div className="relative w-full max-w-162.5 aspect-[2.5/1]">
+            <div className="relative w-full aspect-[2.5/1]">
               <Image
                 src="/images/logo.png"
                 alt="MinKara"
@@ -57,8 +54,7 @@ export default function HomePage() {
               />
             </div>
 
-            {/* キャッチコピー */}
-            <div className="relative w-full max-w-112.5 aspect-5/1">
+            <div className="relative w-full max-w-[450px] aspect-5/1">
               <Image
                 src="/images/catchcopy.png"
                 alt="みんなでカラオケをプレイしよう"
@@ -71,8 +67,14 @@ export default function HomePage() {
         </div>
 
         {/* ボタンエリア */}
-        <div className="w-full max-w-4xl flex flex-col md:flex-row gap-5 items-center justify-center mt-auto">
-          {/* CREATE ROOM BUTTON */}
+        <div
+          className="w-full max-w-4xl flex flex-col md:flex-row gap-5 items-center justify-center mt-auto"
+          style={{
+            paddingLeft: "24px",
+            paddingRight: "24px",
+            paddingBottom: "60px",
+          }}
+        >
           <ModernButton
             onClick={() => router.push("/room/create")}
             type="primary"
@@ -82,7 +84,6 @@ export default function HomePage() {
             delay={0.2}
           />
 
-          {/* JOIN ROOM BUTTON */}
           <ModernButton
             onClick={() => router.push("/room/join")}
             type="secondary"
@@ -92,9 +93,6 @@ export default function HomePage() {
             delay={0.3}
           />
         </div>
-
-        {/* 空白 */}
-        <div className="h-20 md:h-32 w-full flex-none" />
       </div>
     </div>
   );
