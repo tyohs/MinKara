@@ -288,7 +288,15 @@ export default function DenmokuPage() {
   );
 
   return (
-    <main className="min-h-screen flex flex-col relative bg-black text-white overflow-hidden">
+    <main
+      className="min-h-screen flex flex-col relative bg-black text-white overflow-hidden"
+      style={{
+        paddingLeft: "24px",
+        paddingRight: "24px",
+        paddingTop: "24px",
+        paddingBottom: "24px",
+      }}
+    >
       {/* Background Video */}
       <div className="fixed inset-0 w-full h-full overflow-hidden z-0 pointer-events-none bg-black">
         <video
@@ -316,7 +324,10 @@ export default function DenmokuPage() {
         </div>
 
         {/* Room ID Display */}
-        <div className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10">
+        <div
+          className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-1.5 border border-white/10"
+          style={{ marginBottom: "12px" }}
+        >
           <span className="text-gray-400 text-xs md:text-sm">ID:</span>
           <span className="font-mono font-bold text-white text-sm md:text-base tracking-wider">
             {roomId}
