@@ -62,11 +62,6 @@ export function generateRoomCode(): string {
   return code;
 }
 
-// Generate random user ID
-export function generateUserId(): string {
-  return crypto.randomUUID();
-}
-
 // Create a new room
 export async function createRoom(hostId: string): Promise<string | null> {
   const roomId = generateRoomCode();

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { finishSession } from './useGameSession';
+import { getClientUserId } from '@/lib/clientIdentity';
 
 interface ScoreSubmission {
   roomId: string;
@@ -45,12 +46,5 @@ export async function submitScore({
  * Get user ID from localStorage or generate new one
  */
 export function getUserId(): string {
-  if (typeof window === 'undefined') return 'anonymous';
-  
-  let userId = localStorage.getItem('minkaraUserId');
-  if (!userId) {
-    userId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    localStorage.setItem('minkaraUserId', userId);
-  }
-  return userId;
+  return getClientUserId();
 }

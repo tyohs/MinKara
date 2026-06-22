@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useRoomStore, joinRoom, generateUserId } from "@/store/useRoomStore";
+import { useRoomStore, joinRoom } from "@/store/useRoomStore";
+import { getClientUserId } from "@/lib/clientIdentity";
 
 export default function JoinRoomPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function JoinRoomPage() {
 
   useEffect(() => {
     if (!myUserId) {
-      const userId = generateUserId();
+      const userId = getClientUserId();
       setMyUserId(userId);
     }
   }, [myUserId, setMyUserId]);

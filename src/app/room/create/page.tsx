@@ -7,13 +7,13 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import {
   useRoomStore,
   createRoom,
-  generateUserId,
   joinRoom,
 } from "@/store/useRoomStore";
+import { getClientUserId } from "@/lib/clientIdentity";
 
 export default function CreateRoomPage() {
   const router = useRouter();
-  const { setRoomId, setMyUserId, setMyName, myUserId } = useRoomStore();
+  const { setRoomId, setIsHost, setMyUserId, setMyName, myUserId } = useRoomStore();
 
   const [name, setName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -21,7 +21,7 @@ export default function CreateRoomPage() {
 
   useEffect(() => {
     if (!myUserId) {
-      const userId = generateUserId();
+      const userId = getClientUserId();
       setMyUserId(userId);
     }
   }, [myUserId, setMyUserId]);
@@ -34,6 +34,7 @@ export default function CreateRoomPage() {
     const newRoomId = await createRoom(myUserId);
     if (newRoomId) {
       setRoomId(newRoomId);
+      setIsHost(true);
       const displayName = name.trim() || "ゲスト";
       setMyName(displayName);
       const success = await joinRoom(newRoomId, myUserId, displayName);

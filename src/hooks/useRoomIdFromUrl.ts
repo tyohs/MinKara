@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 /**
  * URLパスからルームIDを取得するカスタムフック
@@ -8,17 +8,7 @@ import { useState, useEffect } from 'react';
  * @returns 有効なroomId
  */
 export function useRoomIdFromUrl(propRoomId?: string): string {
-  const [urlRoomId, setUrlRoomId] = useState('');
-
-  useEffect(() => {
-    // PropsでroomIdが渡されていない場合のみURLから取得を試みる
-    if (typeof window !== 'undefined' && !propRoomId) {
-      const match = window.location.pathname.match(/\/room\/([^\/]+)/);
-      if (match && match[1]) {
-        setUrlRoomId(match[1]);
-      }
-    }
-  }, [propRoomId]);
-
+  const pathname = usePathname();
+  const urlRoomId = pathname.match(/\/room\/([^/]+)/)?.[1] ?? '';
   return propRoomId || urlRoomId;
 }

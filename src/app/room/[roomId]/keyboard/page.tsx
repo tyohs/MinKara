@@ -17,6 +17,7 @@ export default function KeyboardPage() {
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
+  const [joinedAt] = useState(Date.now);
 
   // 曲データを取得
   const song = useMemo(() => {
@@ -44,12 +45,12 @@ export default function KeyboardPage() {
     
     if (session?.song_started_at) {
       const startTime = new Date(session.song_started_at).getTime();
-      const elapsed = Date.now() - startTime;
+      const elapsed = joinedAt - startTime;
       return getNotesFromPosition(chart.notes, elapsed);
     }
     
     return chart.notes;
-  }, [chart, session?.song_started_at]);
+  }, [chart, session?.song_started_at, joinedAt]);
 
 
 

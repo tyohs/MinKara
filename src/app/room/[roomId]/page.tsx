@@ -23,8 +23,9 @@ import {
   useRoomStore,
   fetchParticipants,
   leaveRoom,
-  generateUserId,
 } from "@/store/useRoomStore";
+import { getClientUserId } from "@/lib/clientIdentity";
+import { isRoomHost } from "@/lib/roomAccess";
 import { GENRES, filterSongs, getSongById } from "@/data/songs";
 import {
   useGameSession,
@@ -47,6 +48,7 @@ export default function DenmokuPage() {
     participants,
     setParticipants,
     setRoomId,
+    setIsHost,
     reset,
     isHost,
   } = useRoomStore();
@@ -68,16 +70,18 @@ export default function DenmokuPage() {
 
   const fetchRoomData = useCallback(async () => {
     try {
-      const [participantList, { data: reservationsData }] = await Promise.all([
+      const [participantList, { data: reservationsData }, { data: room }] = await Promise.all([
         fetchParticipants(roomId),
         supabase
           .from("reservations")
           .select("*")
           .eq("room_id", roomId)
           .order("order", { ascending: true }),
+        supabase.from("rooms").select("host_id").eq("id", roomId).maybeSingle(),
       ]);
 
       setParticipants(participantList);
+      setIsHost(isRoomHost(room, myUserId));
       if (reservationsData) {
         setReservations(reservationsData);
       }
@@ -86,7 +90,7 @@ export default function DenmokuPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [roomId, setParticipants]);
+  }, [roomId, myUserId, setIsHost, setParticipants]);
 
   useEffect(() => {
     setRoomId(roomId);
@@ -95,7 +99,7 @@ export default function DenmokuPage() {
 
   useEffect(() => {
     if (!myUserId) {
-      const userId = generateUserId();
+      const userId = getClientUserId();
       setMyUserId(userId);
     }
   }, [myUserId, setMyUserId]);
