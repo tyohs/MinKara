@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SingerGame } from '@/components/game';
 import { getSongById } from '@/data/songs';
@@ -14,17 +14,12 @@ export default function SingerPage() {
   const roomId = params.roomId as string;
 
   const { session } = useGameSession(roomId);
-  const [isReady, setIsReady] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 曲データを取得
-  const song = useMemo(() => {
-    if (session?.song_id) {
-      return getSongById(session.song_id);
-    }
-    return null;
-  }, [session?.song_id]);
+  const song = session?.song_id ? getSongById(session.song_id) : null;
+  const isReady = session?.status === 'playing';
 
   // Audio sync hook
   const { audioRef, isPlaying, error } = useSyncedAudio(
@@ -62,8 +57,6 @@ export default function SingerPage() {
 
   // ゲーム開始の準備（status変更に追従）
   useEffect(() => {
-    setIsReady(session?.status === 'playing');
-
     // 強制終了（演奏停止）された場合
     if (session?.status === 'finished') {
       router.push(`/room/${roomId}`);
@@ -90,7 +83,7 @@ export default function SingerPage() {
     } catch (error) {
       console.error('Failed to stop session:', error);
     }
-  }, [session?.id]);
+  }, [session]);
 
   // クリーンアップ
   useEffect(() => {

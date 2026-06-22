@@ -71,6 +71,7 @@ export default function KeyboardGame({
 
   const judgmentTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameEndedRef = useRef(false);
+  const currentTimeRef = useRef(0);
 
 
   // propsが変更されたらstateを更新
@@ -79,7 +80,7 @@ export default function KeyboardGame({
     if (initialNotes.length > 0 && initialNotes.length !== notes.length) {
       setNotes(initialNotes);
     }
-  }, [initialNotes]);
+  }, [initialNotes, notes.length]);
 
 
 
@@ -259,23 +260,7 @@ export default function KeyboardGame({
     }
   }, [currentTime, songDuration, score, maxCombo, onGameEnd]);
 
-  // 縦向きの場合は回転を促すオーバーレイを表示
-  if (!isLandscape) {
-    return (
-      <div className={styles.rotateOverlay}>
-        <div className={styles.rotateIcon}>📱</div>
-        <div className={styles.rotateText}>
-          横向きにしてプレイしてください
-        </div>
-        <div className={styles.rotateHint}>
-          Rotate your device to landscape mode
-        </div>
-      </div>
-    );
-  }
-
   // currentTimeをRefでも保持する（setInterval内で参照するため）
-  const currentTimeRef = useRef(0);
   useEffect(() => {
     currentTimeRef.current = currentTime;
   }, [currentTime]);
@@ -311,6 +296,21 @@ export default function KeyboardGame({
       setFakeNotes(prev => prev.filter(n => n.time > currentTime - 200));
     }
   }, [currentTime, fakeNotes]); // 依存配列修正: fakeNotes全体を含める
+
+  // Hooksは画面向きにかかわらず同じ順序で呼び出す。
+  if (!isLandscape) {
+    return (
+      <div className={styles.rotateOverlay}>
+        <div className={styles.rotateIcon}>📱</div>
+        <div className={styles.rotateText}>
+          横向きにしてプレイしてください
+        </div>
+        <div className={styles.rotateHint}>
+          Rotate your device to landscape mode
+        </div>
+      </div>
+    );
+  }
 
 
   return (

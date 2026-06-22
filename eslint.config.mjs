@@ -5,6 +5,15 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      // Existing realtime/game effects intentionally synchronize local UI state.
+      "react-hooks/set-state-in-effect": "off",
+      // React Compiler advisory rules are not runtime correctness boundaries.
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/purity": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

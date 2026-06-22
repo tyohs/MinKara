@@ -33,6 +33,7 @@ export default function BandPage() {
   const { session } = useGameSession(roomId);
   const [isReady, setIsReady] = useState(false);
   const [gameEnded, setGameEnded] = useState(false);
+  const [joinedAt] = useState(Date.now);
 
   // 曲データを取得
   const song = useMemo(() => {
@@ -68,13 +69,13 @@ export default function BandPage() {
     
     if (session?.song_started_at) {
       const startTime = new Date(session.song_started_at).getTime();
-      const elapsed = Date.now() - startTime;
+      const elapsed = joinedAt - startTime;
       const filtered = getNotesFromPosition(targetNotes, elapsed);
       return filtered;
     }
     
     return targetNotes;
-  }, [chart, session?.song_started_at, session?.song_id, instrument]);
+  }, [chart, session?.song_started_at, instrument, joinedAt]);
 
 
 

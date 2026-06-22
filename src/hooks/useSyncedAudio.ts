@@ -12,6 +12,8 @@ import { useEffect, useRef, useState } from 'react';
  */
 export function useSyncedAudio(songStartedAt: string | null, audioUrl: string) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!songStartedAt) return;
@@ -62,11 +64,7 @@ export function useSyncedAudio(songStartedAt: string | null, audioUrl: string) {
       audio.addEventListener('canplay', handleCanPlay, { once: true });
     }
 
-  }, [songStartedAt]);
-
-  // 再生状態を監視（オプション）
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  }, [songStartedAt, audioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;

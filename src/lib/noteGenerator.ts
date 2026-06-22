@@ -1,6 +1,5 @@
 import { NoteData } from '@/components/game/Note';
 import { LANE_COUNT } from '@/lib/gameConfig';
-import { v4 as uuidv4 } from 'uuid';
 
 interface GenerateNotesOptions {
   songId: string;
@@ -91,7 +90,7 @@ export function generateNotesFromBPM(options: GenerateNotesOptions): NoteData[] 
     const isSpecial = Math.random() < specialNoteChance;
 
     notes.push({
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       lane,
       time: Math.round(time),
       type: isSpecial ? 'special' : 'normal',

@@ -36,9 +36,10 @@ export const useGameObstruction = (activeRoomId: string) => {
 
   // クリーンアップ：コンポーネントアンマウント時に全タイマーを解除
   useEffect(() => {
+    const timeouts = timeoutRefs.current;
     return () => {
-      timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
-      timeoutRefs.current.clear();
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+      timeouts.clear();
     };
   }, []);
 

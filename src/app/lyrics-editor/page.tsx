@@ -184,6 +184,8 @@ export default function LyricsEditorPage() {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
+  // selectedSong duration is the stable input needed during one scrub gesture.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isScrubbing, selectedSong?.duration]);
 
   // TypeScript出力を生成

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isUniqueConstraintViolation } from '@/lib/sessionLifecycle';
 
 export interface GameSession {
   id: string;
@@ -15,26 +16,31 @@ export interface GameSession {
   created_at: string;
 }
 
+async function getActiveGameSession(roomId: string): Promise<GameSession | null> {
+  const { data, error } = await supabase
+    .from('game_sessions')
+    .select('*')
+    .eq('room_id', roomId)
+    .neq('status', 'finished')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching active game session:', error);
+    return null;
+  }
+
+  return data as GameSession | null;
+}
+
 export function useGameSession(roomId: string) {
   const [session, setSession] = useState<GameSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Fetch current active session
   const fetchSession = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('game_sessions')
-      .select('*')
-      .eq('room_id', roomId)
-      .neq('status', 'finished')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!error && data) {
-      setSession(data);
-    } else {
-      setSession(null);
-    }
+    setSession(await getActiveGameSession(roomId));
     setLoading(false);
   }, [roomId]);
 
@@ -74,13 +80,7 @@ export async function createGameSession(
   singerId: string
 ): Promise<GameSession | null> {
   // First check if there's already an active session
-  const { data: existing } = await supabase
-    .from('game_sessions')
-    .select('*')
-    .eq('room_id', roomId)
-    .neq('status', 'finished')
-    .limit(1)
-    .maybeSingle();
+  const existing = await getActiveGameSession(roomId);
 
   if (existing) {
     return existing as GameSession;
@@ -100,6 +100,10 @@ export async function createGameSession(
     .select()
     .single();
 
+  if (isUniqueConstraintViolation(error)) {
+    return getActiveGameSession(roomId);
+  }
+
   if (error) {
     console.error('Error creating game session:', error);
     return null;
@@ -116,7 +120,8 @@ export async function startRoleSelect(sessionId: string): Promise<void> {
       role_select_started_at: new Date().toISOString(),
       status: 'role_select',
     })
-    .eq('id', sessionId);
+    .eq('id', sessionId)
+    .eq('status', 'countdown');
 }
 
 // Update session to playing phase
@@ -127,34 +132,28 @@ export async function startPlaying(sessionId: string): Promise<void> {
       song_started_at: new Date().toISOString(),
       status: 'playing',
     })
-    .eq('id', sessionId);
+    .eq('id', sessionId)
+    .eq('status', 'role_select');
 }
 
 // Mark session as finished and cleanup reservation
 export async function finishSession(sessionId: string): Promise<void> {
   try {
-    // First get the reservation_id
-    const { data: session, error: fetchError } = await supabase
-      .from('game_sessions')
-      .select('reservation_id')
-      .eq('id', sessionId)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching session for finish:', fetchError);
-    }
-
-    // Mark session as finished
-    const { error: updateError } = await supabase
+    // Only the first finisher advances the queue. Repeated client events are no-ops.
+    const { data: session, error: updateError } = await supabase
       .from('game_sessions')
       .update({
         ended_at: new Date().toISOString(),
         status: 'finished',
       })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .neq('status', 'finished')
+      .select('reservation_id')
+      .maybeSingle();
 
     if (updateError) {
       console.error('Error updating session status:', updateError);
+      return;
     }
 
     // Delete the reservation to advance the queue
